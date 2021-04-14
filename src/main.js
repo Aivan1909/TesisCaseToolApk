@@ -3,18 +3,7 @@ import App from "./App.vue";
 import router from "./router";
 import store from "./store";
 
-import firebase from "firebase";
-var firebaseConfig = {
-  apiKey: "AIzaSyDKRKgkpOYnu6C5x8-FbIpSY2_rIW0ecng",
-  authDomain: "tesiscase.firebaseapp.com",
-  projectId: "tesiscase",
-  storageBucket: "tesiscase.appspot.com",
-  messagingSenderId: "845140039633",
-  appId: "1:845140039633:web:cc7d2249d41b24cf1fb2f0"
-};
-// Initialize Firebase
-firebase.initializeApp(firebaseConfig);
-
+import "./firebase";
 
 import BootstrapVue from 'bootstrap-vue'
 
@@ -36,6 +25,14 @@ Vue.use(VueCodemirror, /* {
   options: { theme: 'base16-dark', ... },
   events: ['scroll', ...]
 } */)
+
+import { library } from '@fortawesome/fontawesome-svg-core'
+import { faFile, faFolderOpen, faSave, faLifeRing, faPlusCircle, faEdit, faTimes } from '@fortawesome/free-solid-svg-icons'
+import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
+
+library.add(faFile, faFolderOpen, faSave, faLifeRing, faPlusCircle, faEdit, faTimes)
+
+Vue.component('font-awesome-icon', FontAwesomeIcon)
 
 Vue.config.productionTip = false;
 

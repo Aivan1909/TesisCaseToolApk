@@ -37,6 +37,12 @@ export default new Vuex.Store({
     addErrores(state){
       state.stErrores = [state.stError,...state.stErrores]
     },
+    cleanLenguajes(state){
+      state.stLenguajes = []
+    },
+    cleanParametricas(state){
+      state.stParametricas = []
+    }
   },
   actions: {
     addLenguajesAction(context){
@@ -56,6 +62,12 @@ export default new Vuex.Store({
     },
     addErroresAction(context){
       context.commit('addErrores')
+    },
+    cleanLenguajesAction(context){
+      context.commit('cleanLenguajes')
+    },
+    cleanParametricasAction(context){
+      context.commit('cleanParametricas')
     },
   },
   getters: {

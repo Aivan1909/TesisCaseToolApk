@@ -9,20 +9,20 @@
         <b-collapse id="nav-collapse" is-nav>
             <b-navbar-nav>
                 <b-nav-item href="#">
-                    <i class="fas fa-file fa-md mr-1"></i>
+                    <font-awesome-icon icon="file" class="mr-1"/>
                     <span>Nuevo</span>
                 </b-nav-item>
                 <b-nav-item href="#">
-                    <i class="fas fa-folder-open fa-md mr-1"></i>
+                    <font-awesome-icon icon="folder-open" class="mr-1"/>
                     Abrir
                 </b-nav-item>
                 <b-nav-item href="#">
-                    <i class="fas fa-save fa-md mr-1"></i>
+                    <font-awesome-icon icon="save" class="mr-1"/>
                     Guardar
                 </b-nav-item>
                 <b-nav-item-dropdown>
                     <template #button-content>
-                        <i class="fas fa-life-ring fa-md mr-1"></i>
+                        <font-awesome-icon icon="life-ring" class="mr-1"/>
                         Ayuda
                     </template>
                     <b-dropdown-item>Ayuda</b-dropdown-item>
