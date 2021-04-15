@@ -17,6 +17,7 @@ Vue.use(BootstrapVue)
 import VueCodemirror from 'vue-codemirror'
 // require styles
 import 'codemirror/lib/codemirror.css'
+import "codemirror/mode/pascal/pascal.js";
  
 // require more codemirror resource...
  

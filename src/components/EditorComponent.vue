@@ -6,12 +6,73 @@
           <!-- Contenedor de Editor de Texto -->
           <div class="col-9 p-2 h-100">
             <div class="border rounded border-light" id="pnl_pseudo">
+              <!-- Primer header de editor de texto -->
               <div class="bg-dark d-flex justify-content-between small">
-                <div class="d-flex">
+                <b-row align-v="center" class="pl-3">
+                  <b-col sm="12" md="6">
+                    <b-row align-v="center">
+                      <b-col sm="12" md="3">
+                        <span class="text-white ">Entrada: </span>
+                      </b-col>
+                      <b-col sm="12" md="8">
+                        <b-form-select
+                          v-model="lenguajes.in.selected"
+                          :options="lenguajes.in.data"
+                          value-field="idLenguaje"
+                          text-field="nombre"
+                          class="m-1"
+                          size="sm"
+                          @change="setModeCodemirrorIn"
+                        >
+                          <template #first>
+                            <b-form-select-option :value="null" disabled
+                              >-- Entrada --</b-form-select-option
+                            >
+                          </template>
+                        </b-form-select>
+                      </b-col>
+                    </b-row>
+                  </b-col>
+                  <b-col sm="12" md="6">
+                    <b-row align-v="center">
+                      <b-col sm="12" md="3">
+                        <span class="text-white">Salida: </span>
+                      </b-col>
+                      <b-col sm="12" md="8">
+                        <b-form-select
+                          v-model="lenguajes.out.selected"
+                          :options="lenguajes.out.data"
+                          value-field="idLenguaje"
+                          text-field="nombre"
+                          class="m-1"
+                          size="sm"
+                        >
+                          <template #first>
+                            <b-form-select-option :value="null" disabled
+                              >-- Salida --</b-form-select-option
+                            >
+                          </template>
+                        </b-form-select>
+                      </b-col>
+                    </b-row>
+                  </b-col>
+                </b-row>
+                <b-button
+                  v-b-modal.modal-generarCodigo
+                  variant="success"
+                  class="rounded-0"
+                  size="sm"
+                  >Generar</b-button
+                >
+              </div>
+              <!-- /Primer header de editor de texto -->
+              <!-- Segundo header de editor de texto -->
+              <div class="bg-secondary d-flex justify-content-between small">
                   <b-button
                     v-b-modal.modal-changeFileName
                     size="sm"
-                    variant="dark"
+                    variant="secondary"
+                    class="pl-3"
                     @click="newNombreArchivo = nombreArchivo"
                     >{{ nombreArchivo }}<font-awesome-icon icon="edit" class="ml-3" />
                   </b-button>
@@ -29,20 +90,15 @@
                     ></b-form-input>
                   </b-modal>
                   <!-- /Modal Cambio de Nombre -->
-                </div>
-                <b-button
-                  v-b-modal.modal-generarCodigo
-                  variant="success"
-                  class="rounded-0"
-                  size="sm"
-                  >Generar</b-button
-                >
               </div>
+              <!-- /Segundo header de editor de texto -->
+              <!-- Editor de Texto -->
               <codemirror
                 v-model="code"
                 :options="cmOptions"
                 class="text-left w-100"
               ></codemirror>
+              <!-- /Editor de Texto -->
             </div>
           </div>
           <!-- Contenedores -->
@@ -51,23 +107,26 @@
             <div class="mb-2">
               <b-button
                 v-b-toggle.collapse-var
-                variant="outline-light"
+                variant="outline-secondary"
                 block
                 class="text-left text-dark"
               >
                 <i class="fas fa-i-cursor fa-sm mr-1"></i>
                 <span class="ms-2">Variables</span>
               </b-button>
-              <b-collapse id="collapse-var">
+              <b-collapse id="collapse-var" visible>
                 <b-card no-body class="p-0">
                   <!-- Formulario de Adicion de Variable -->
                   <div class="d-flex justify-content-center mb-3">
-                    <input
-                      type="text"
+                    <b-form-input
                       class="form-control form-control-sm m-1"
                       placeholder="Variable"
+                      aria-describedby="input-live-error"
+                      trim
+                      :state="variables.newVarState"
                       v-model="variables.newVar"
-                    />
+                    >
+                    </b-form-input>
                     <b-form-select
                       v-model="variables.selected"
                       :options="tiposVarCons"
@@ -89,8 +148,8 @@
                     :items="variables.items"
                     :fields="variables.fields"
                   >
-                    <template #cell(id)="data">
-                      <button class="btn btn-sm btn-danger m-1" @click="eliminarVariable(data.value)">-</button>
+                    <template #cell(var)="data">
+                      <b-button size="sm" variant="light" @click="eliminarVariable(data.item.id)">-</b-button> {{data.item.var}}
                     </template>
                   </b-table>
                   <!-- /Tabla de Variables -->
@@ -102,14 +161,14 @@
             <div class="mb-2">
               <b-button
                 v-b-toggle.collapse-const
-                variant="outline-light"
+                variant="outline-secondary"
                 block
                 class="text-left text-dark"
               >
                 <i class="fas fa-i-cursor fa-sm mr-1"></i>
                 <span class="ms-2">Constantes</span>
               </b-button>
-              <b-collapse id="collapse-const" class="mb-2">
+              <b-collapse id="collapse-const" class="mb-2" visible>
                 <b-card no-body class="p-0">
                   <!-- Formulario de Adicion de Constante -->
                   <div class="d-flex justify-content-center mb-3">
@@ -139,7 +198,7 @@
                       v-model="constantes.newVal"
                       trim
                     />
-                    <button class="btn btn-sm btn-primary m-1" @click="agregarConstante">+</button>
+                    <b-button class="m-1" size="sm" variant="primary" @click="agregarConstante">+</b-button>
                   </div>
                   <!-- /Formulario de Adicion de Constante -->
                   <!-- Tabla de Constantes -->
@@ -150,8 +209,8 @@
                     :items="constantes.items"
                     :fields="constantes.fields"
                   >
-                    <template #cell(id)="data">
-                      <button class="btn btn-sm btn-danger m-1" @click="eliminarVariable(data.value)">-</button>
+                    <template #cell(var)="data">
+                      <b-button variant="light" size="sm" @click="eliminarConstante(data.item.id)">-</b-button> {{ data.item.var }}
                     </template>
                   </b-table>
                   <!-- /Tabla de Constantes -->
@@ -163,7 +222,7 @@
             <div class="mb-2">
               <b-button
                 v-b-toggle.collapse-proc
-                variant="outline-light"
+                variant="outline-secondary"
                 block
                 class="text-left text-dark"
               >
@@ -204,7 +263,7 @@
             <div class="mb-2">
               <b-button
                 v-b-toggle.collapse-error
-                variant="outline-light"
+                variant="outline-secondary"
                 block
                 class="text-left text-dark"
               >
@@ -214,7 +273,7 @@
                   error.items.length
                 }}</b-badge>
               </b-button>
-              <b-collapse id="collapse-error" class="mb-2">
+              <b-collapse id="collapse-error" class="mb-2" visible>
                 <b-card no-body class="p-0">
                   <!-- Tabla de Errores -->
                   <b-table
@@ -238,7 +297,6 @@
 
 <script>
 import { codemirror } from "vue-codemirror";
-import "codemirror/mode/pascal/pascal.js";
 import { db } from "./../firebase.js";
 
 import mdlProcedimiento from "./ModalProcedimiento.vue"
@@ -249,8 +307,14 @@ export default {
       nombreArchivo: "Archivo_01",
       newNombreArchivo: null,
       lenguajes:{
-        in: [],
-        out: []
+        in: {
+          selected: null,
+          data: []
+        },
+        out: {
+          selected: null,
+          data: []
+        }
       },
       parametricas:[],
       code: 'algo := 5;\nif &var>=0 then\nwrite("Numero positivo");\nelse\nwrite("Numero negativo");',
@@ -269,10 +333,11 @@ export default {
       ],
       variables: {
         newVar: null,
+        newVarState: null,
         selected: null,
-        fields: [{key:"var", label: "Var"}, 
-                  {key:"tipo", label:"Tipo"},
-                  {key:"id", label:""}
+        fields: [
+          {key:"var", label: "Var"}, 
+          {key:"tipo", label:"Tipo"},
         ],
         items: []
       },
@@ -280,15 +345,16 @@ export default {
         newCtte: null,
         newVal: null,
         selected: null,
-        fields: [{key:"var", label: "Var"}, 
-                  {key:"tipo", label:"Tipo"}, 
-                  {key:"valor", label:"Valor"},
-                  {key:"id", label:""}],
+        fields: [
+          {key:"var", label: "Ctte"}, 
+          {key:"tipo", label:"Tipo"}, 
+          {key:"valor", label:"Valor"}
+        ],
         items: [],
       },
       procedimientos:{
         fields: [{key:"procedure", label: "Procedimiento"}, 
-                  {key:"procIn", label:"Entrada"}, 
+                  {key:"procIn", label:"Entrada"},
                   {key:"procOut", label:"Salida"},
                   {key:"id", label:""}],
         items: [],
@@ -317,15 +383,15 @@ export default {
   },
   methods: {
     extraeLenguajes(){
-      this.lenguajes.in = []
-      this.lenguajes.out = []
+      this.lenguajes.in.data = []
+      this.lenguajes.out.data = []
       /* Extrae los lenguajes de entrada */
       db.collection("T_Lenguaje").where('codeIn', '==', true).get()
       .then(data=>{
           data.forEach(line => {
             this.$store.state.stLenguaje = line.data()
             this.$store.dispatch('addLenguajesAction')
-            this.lenguajes.in.push(line.data())
+            this.lenguajes.in.data.push(line.data())
             this.$store.state.stLenguaje = null
           });
       })
@@ -335,7 +401,7 @@ export default {
           data.forEach(line => {
             this.$store.state.stLenguaje = line.data()
             this.$store.dispatch('addLenguajesAction')
-            this.lenguajes.out.push(line.data())
+            this.lenguajes.out.data.push(line.data())
             this.$store.state.stLenguaje = null
           });
       })
@@ -353,20 +419,29 @@ export default {
           })
     },
     agregarVariable(){
-      let variable = this.variables.newVar
+      let variable = new RegExp("^[a-zA-Z]+([-_][a-zA-Z0-9]+)*$").test(this.variables.newVar)?this.variables.newVar:null;
       let tipo = this.tiposVarCons.find(el => el.value == this.variables.selected).text;
       let id = this.variables.items.length + 100
-      console.log(id, tipo, this.variables.selected)
-      this.variables.items.push({id: id, var: variable, tipo: tipo})
+      if(variable!=null && tipo!=null)
+      {
+        this.variables.items.push({id: id, var: variable, tipo: tipo})
+        this.variables.newVar = this.variables.selected = null
+        this.$store.state.stVariable = {id: id, var: variable, tipo: tipo}
+        this.$store.dispatch('addVariablesAction')
+      }
     },
     eliminarVariable(id)
     {
-      //TODO
-      let i = this.variables.items.find(el => el.id==id)
-      console.log(i)
+      const i = this.variables.items.indexOf(this.variables.items.find(el => el.id==id))
+      if(i>=0){
+        this.variables.items.splice(i, 1)
+        this.$store.state.stVariable = i
+        this.$store.dispatch('deleteVariableAction')
+        this.$store.state.stVariable = null
+      }
     },
     agregarConstante(){
-      let ctte = this.constantes.newCtte
+      let ctte = new RegExp("^[a-zA-Z]+([-_][a-zA-Z0-9]+)*$").test(this.constantes.newCtte)?this.constantes.newCtte:null;
       let valor = this.constantes.newVal
       let tipo = this.tiposVarCons.find(el => el.value == this.constantes.selected).text;
       let valorTipo = this.tiposVarCons.find(el => el.value == this.constantes.selected).value;
@@ -380,26 +455,31 @@ export default {
           sw = true
           break;
         case 2:
-          regex = new RegExp('\\d+')
+          regex = new RegExp('^[0-9]+$')
           if(regex.test(valor))
             sw = true
           break;
         case 3:
-          regex = new RegExp("^\\d+([.]\\d+)*$")
+          regex = new RegExp("^[0-9]+([.][0-9]+)?$")
           if(regex.test(valor))
             sw = true
           break;
       }
-      if(sw){
+      if(sw && ctte!=null && valor!=null){
         this.constantes.items.push({id: id, var: ctte, tipo: tipo, valor: valor})
         this.constantes.newCtte = this.constantes.newVal = this.constantes.selected = null
       }
     },
     eliminarConstante(id)
     {
-      //TODO
-      let i = this.constantes.items.find(el => el.id==id)
-      console.log(i)
+      const i = this.constantes.items.indexOf(this.constantes.items.find(el => el.id==id))
+      if(i>=0)
+        this.constantes.items.splice(i, 1)
+    },
+    setModeCodemirrorIn()
+    {
+      this.cmOptions.mode = this.lenguajes.in.data.find(el => el.idLenguaje == this.lenguajes.in.selected).libCodemirror
+      console.log(this.cmOptions)
     }
     /* async verificaSintaxisPseudo(){
             console.log(this.code)

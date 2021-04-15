@@ -20,28 +20,37 @@ export default new Vuex.Store({
   },
   mutations: {
     addLenguajes(state){
-      state.stLenguajes = [state.stLenguaje,...state.stLenguajes]
+      state.stLenguajes.push(state.stLenguaje)
+      state.stLenguaje = null
     },
     addParametricas(state){
-      state.stParametricas = [state.stParametrica,...state.stParametricas]
+      state.stParametricas.push(state.stParametrica)
+      state.stParametrica = null
     },
     addVariables(state){
-      state.stVariables = [state.stVariable,...state.stVariables]
+      state.stVariables.push(state.stVariable)
+      state.stVariable = null
     },
     addConstantes(state){
-      state.stConstantes = [state.stConstante,...state.stConstantes]
+      state.stConstantes.push(state.stConstante)
+      state.stConstante = null
     },
     addProcedimientos(state){
-      state.stProcedimientos = [state.stProcedimiento,...state.stProcedimientos]
+      state.stProcedimientos.push(state.stProcedimiento)
+      state.stProcedimiento = null
     },
     addErrores(state){
-      state.stErrores = [state.stError,...state.stErrores]
+      state.stErrores.push(state.stError)
+      state.stError = null
     },
     cleanLenguajes(state){
       state.stLenguajes = []
     },
     cleanParametricas(state){
       state.stParametricas = []
+    },
+    deleteVariable(state){
+      state.stVariables.splice(parseInt(state.stVariable), 1)
     }
   },
   actions: {
@@ -69,6 +78,9 @@ export default new Vuex.Store({
     cleanParametricasAction(context){
       context.commit('cleanParametricas')
     },
+    deleteVariableAction(context){
+      context.commit('deleteVariable')
+    }
   },
   getters: {
     getLenguajes(state){
