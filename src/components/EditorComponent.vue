@@ -19,7 +19,7 @@
                           v-model="lenguajes.in.selected"
                           :options="lenguajes.in.data"
                           value-field="idLenguaje"
-                          text-field="nombre"
+                          text-field = "nombre"
                           class="m-1"
                           size="sm"
                           @change="setModeCodemirrorIn"
@@ -149,7 +149,9 @@
                     :fields="variables.fields"
                   >
                     <template #cell(var)="data">
-                      <b-button size="sm" variant="light" @click="eliminarVariable(data.item.id)">-</b-button> {{data.item.var}}
+                      <b-button size="sm" variant="light" @click="eliminarVariable(data.item.id)">
+                          <font-awesome-icon icon="trash" class="text-danger"/>
+                      </b-button> {{data.item.var}}
                     </template>
                   </b-table>
                   <!-- /Tabla de Variables -->
@@ -210,7 +212,9 @@
                     :fields="constantes.fields"
                   >
                     <template #cell(var)="data">
-                      <b-button variant="light" size="sm" @click="eliminarConstante(data.item.id)">-</b-button> {{ data.item.var }}
+                        <b-button size="sm" variant="light" @click="eliminarConstante(data.item.id)">
+                            <font-awesome-icon icon="trash" class="text-danger"/>
+                        </b-button> {{data.item.var}}
                     </template>
                   </b-table>
                   <!-- /Tabla de Constantes -->

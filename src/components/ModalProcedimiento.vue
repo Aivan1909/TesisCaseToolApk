@@ -54,7 +54,7 @@
                             <label for="input-small" class="text-white">Variable de entrada:</label>
                         </b-col>
                         <b-col sm="12" md="4">
-                            <b-form-input id="input-small" size="sm" placeholder="Variable"></b-form-input>
+                            <b-form-input id="input-small" size="sm" v-model="newVarIn" placeholder="Variable"></b-form-input>
                         </b-col>
                         <b-col sm="12" md="4">
                             <b-form-select
@@ -71,7 +71,7 @@
                             </b-form-select>
                         </b-col>
                         <b-col sm="1">
-                            <button class="btn btn-sm btn-primary m-1">+</button>
+                            <b-button class="m-1" variant="primary" size="sm" @click="agregarVariable(true)">+</b-button>
                         </b-col>
                     </b-row>
                 </b-col>
@@ -92,8 +92,10 @@
                         </b-col>
                         <b-col sm="12" md="6">
                             <b-form-select
-                                v-model="VarReturnSelected"
-                                :options="tipoVariables"
+                                v-model="varReturnSelected"
+                                :options="variables.items"
+                                value-field="id"
+                                text-field="var"
                                 class="m-1"
                                 size="sm"
                                 :disabled="!checkVarReturn"
@@ -126,50 +128,61 @@
                 <b-col sm="12" md="3">
                     <!-- Acordeon de Variable -->
                     <div class="mb-2">
-                    <b-button
-                        v-b-toggle.collapse-var-proc
-                        variant="outline-light"
-                        block
-                        class="text-left text-dark"
-                    >
-                        <i class="fas fa-i-cursor fa-sm mr-1"></i>
-                        <span class="ms-2">Variables</span>
-                    </b-button>
-                    <b-collapse id="collapse-var-proc">
-                        <b-card no-body class="p-0">
-                        <!-- Formulario de Adicion de Variable -->
-                        <div class="d-flex justify-content-center mb-3">
-                            <input
-                            type="text"
-                            class="form-control form-control-sm m-1"
-                            placeholder="Variable"
-                            v-model="variables.newVar"
-                            />
-                            <b-form-select
-                            v-model="variables.selected"
-                            :options="tipoVariables"
-                            class="m-1"
-                            size="sm"
-                            >
-                            <template #first>
-                                <b-form-select-option :value="null" disabled>-- Tipo --</b-form-select-option>
-                            </template>
-                            </b-form-select>
-                            <button class="btn btn-sm btn-primary m-1">+</button>
-                        </div>
-                        <!-- /Formulario de Adicion de Variable -->
-                        <!-- Tabla de Variables -->
-                        <b-table
-                            hover
-                            small
-                            primary-key="id"
-                            :items="variables.items"
-                            :fields="variables.fields"
+                        <b-button
+                            v-b-toggle.collapse-var-proc
+                            variant="outline-light"
+                            block
+                            class="text-left text-dark"
                         >
-                        </b-table>
-                        <!-- /Tabla de Variables -->
-                        </b-card>
-                    </b-collapse>
+                            <i class="fas fa-i-cursor fa-sm mr-1"></i>
+                            <span class="ms-2">Variables</span>
+                        </b-button>
+                        <b-collapse id="collapse-var-proc">
+                            <b-card no-body class="p-0">
+                            <!-- Formulario de Adicion de Variable -->
+                            <div class="d-flex justify-content-center mb-3">
+                                <input
+                                type="text"
+                                class="form-control form-control-sm m-1"
+                                placeholder="Variable"
+                                v-model="variables.newVar"
+                                />
+                                <b-form-select
+                                v-model="variables.selected"
+                                :options="tipoVariables"
+                                class="m-1"
+                                size="sm"
+                                >
+                                <template #first>
+                                    <b-form-select-option :value="null" disabled>-- Tipo --</b-form-select-option>
+                                </template>
+                                </b-form-select>
+                                <b-button class="m-1" variant="primary" size="sm" @click="agregarVariable(false)">+</b-button>
+                            </div>
+                            <!-- /Formulario de Adicion de Variable -->
+                            <!-- Tabla de Variables -->
+                            <b-table
+                                hover
+                                small
+                                primary-key="id"
+                                :items="variables.items"
+                                :fields="variables.fields"
+                            >
+                                <template #cell(var)="data">
+                                    <b-button size="sm" variant="light" @click="eliminarVariable(data.item.id)">
+                                        <font-awesome-icon icon="trash" class="text-danger"/>
+                                    </b-button> {{data.item.var}}
+                                </template>
+                                <template #cell(in)="data">
+                                    <font-awesome-icon icon="check" variant="success" v-if="data.item.in"/>
+                                </template>
+                                <template #cell(out)="data">
+                                    <font-awesome-icon icon="check" variant="success" v-if="data.item.out"/>
+                                </template>
+                            </b-table>
+                            <!-- /Tabla de Variables -->
+                            </b-card>
+                        </b-collapse>
                     </div>
                     <!-- /Acordeon de Variable -->
                     <!-- Acordeon de Constantes -->
@@ -211,7 +224,7 @@
                             placeholder="Valor"
                             v-model="constantes.newVal"
                             />
-                            <button class="btn btn-sm btn-primary m-1">+</button>
+                            <b-button class="m-1" variant="primary" size="sm" @click="agregarConstante">+</b-button>
                         </div>
                         <!-- /Formulario de Adicion de Constante -->
                         <!-- Tabla de Constantes -->
@@ -222,6 +235,11 @@
                             :items="constantes.items"
                             :fields="constantes.fields"
                         >
+                            <template #cell(var)="data">
+                                <b-button size="sm" variant="light" @click="eliminarConstante(data.item.id)">
+                                    <font-awesome-icon icon="trash" class="text-danger"/>
+                                </b-button> {{data.item.var}}
+                            </template>
                         </b-table>
                         <!-- /Tabla de Constantes -->
                         </b-card>
@@ -277,13 +295,15 @@ export default{
             newVarIn: null,
             newVarSelected: null,
             checkVarReturn: false,
-            VarReturnSelected: null,  
+            varReturnSelected: null,
             variables: {
                 newVar: null,
                 selected: null,
-                fields: [{key:"var", label: "Var"}, 
-                            {key:"tipo", label:"Tipo"},
-                            {key:"id", label:""}
+                fields: [
+                    {key:"var", label: "Var"}, 
+                    {key:"tipo", label:"Tipo"},
+                    {key:"in", label:"In"},
+                    {key:"out", label:"Out"}
                 ],
                 items: []
             },
@@ -291,10 +311,11 @@ export default{
                 newCtte: null,
                 newVal: null,
                 selected: null,
-                fields: [{key:"var", label: "Var"}, 
-                            {key:"tipo", label:"Tipo"}, 
-                            {key:"valor", label:"Valor"},
-                            {key:"id", label:""}],
+                fields: [
+                    {key:"var", label: "Var"}, 
+                    {key:"tipo", label:"Tipo"}, 
+                    {key:"valor", label:"Valor"}
+                ],
                 items: [],
             },
             error: {
@@ -321,9 +342,78 @@ export default{
         tipoVariables: Array
     },
     methods:{
+        agregarVariable(varIn){
+            var va = null;
+            var slct = null;
+            if(varIn){
+                va = this.newVarIn
+                slct = this.newVarSelected
+            }else{
+                va = this.variables.newVar
+                slct = this.variables.selected
+            }
+            console.log(varIn, slct, va)
+            const variable = new RegExp("^[a-zA-Z]+([-_][a-zA-Z0-9]+)*$").test(va)?va:null;
+            const tipo = this.tipoVariables.find(el => el.value == slct).text
+            let id = this.variables.items.length + 1100
+            if(variable!=null && tipo!=null)
+            {
+                this.variables.items.push({id: id, var: variable, tipo: tipo, in:varIn, out:false})
+                this.newVarIn = this.newVarSelected = null
+                this.variables.newVar = this.variables.selected = null
+                /* this.$store.state.stVariable = {id: id, var: variable, tipo: tipo}
+                this.$store.dispatch('addVariablesAction') */
+            }
+        },
+        eliminarVariable(id)
+            {
+            const i = this.variables.items.indexOf(this.variables.items.find(el => el.id==id))
+            if(i>=0){
+                this.variables.items.splice(i, 1)
+                /* this.$store.state.stVariable = i
+                this.$store.dispatch('deleteVariableAction')
+                this.$store.state.stVariable = null */
+            }
+        },
+        agregarConstante(){
+            let ctte = new RegExp("^[a-zA-Z]+([-_][a-zA-Z0-9]+)*$").test(this.constantes.newCtte)?this.constantes.newCtte:null;
+            let valor = this.constantes.newVal
+            let tipo = this.tipoVariables.find(el => el.value == this.constantes.selected).text;
+            let valorTipo = this.tipoVariables.find(el => el.value == this.constantes.selected).value;
+            let id = this.constantes.items.length + 200
+            console.log(id, tipo, this.constantes.selected)
+            let sw = false;
+            let regex;
+            switch (valorTipo) {
+                case 1:
+                valor = `"${valor}"`
+                sw = true
+                break;
+                case 2:
+                regex = new RegExp('^[0-9]+$')
+                if(regex.test(valor))
+                    sw = true
+                break;
+                case 3:
+                regex = new RegExp("^[0-9]+([.][0-9]+)?$")
+                if(regex.test(valor))
+                    sw = true
+                break;
+            }
+            if(sw && ctte!=null && valor!=null){
+                this.constantes.items.push({id: id, var: ctte, tipo: tipo, valor: valor})
+                this.constantes.newCtte = this.constantes.newVal = this.constantes.selected = null
+            }
+        },
+        eliminarConstante(id)
+        {
+            const i = this.constantes.items.indexOf(this.constantes.items.find(el => el.id==id))
+            if(i>=0)
+                this.constantes.items.splice(i, 1)
+        }
     },
-    created(){
-        this.id = this.$store.state.stProcedimientos.length + 300
+    mounted(){
+        this.id = this.$store.state.stProcedimientos.length + 1000
         this.code = "// Aqui va su procedimiento"
     }
 }

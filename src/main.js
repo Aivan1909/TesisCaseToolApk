@@ -17,7 +17,7 @@ Vue.use(BootstrapVue)
 import VueCodemirror from 'vue-codemirror'
 // require styles
 import 'codemirror/lib/codemirror.css'
-import "codemirror/mode/pascal/pascal.js";
+import 'codemirror/mode/pascal/pascal.js';
  
 // require more codemirror resource...
  
@@ -28,10 +28,10 @@ Vue.use(VueCodemirror, /* {
 } */)
 
 import { library } from '@fortawesome/fontawesome-svg-core'
-import { faFile, faFolderOpen, faSave, faLifeRing, faPlusCircle, faEdit, faTimes } from '@fortawesome/free-solid-svg-icons'
+import { faFile, faFolderOpen, faSave, faLifeRing, faPlusCircle, faEdit, faTimes, faCheck, faTrash } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 
-library.add(faFile, faFolderOpen, faSave, faLifeRing, faPlusCircle, faEdit, faTimes)
+library.add(faFile, faFolderOpen, faSave, faLifeRing, faPlusCircle, faEdit, faTimes, faCheck, faTrash)
 
 Vue.component('font-awesome-icon', FontAwesomeIcon)
 
