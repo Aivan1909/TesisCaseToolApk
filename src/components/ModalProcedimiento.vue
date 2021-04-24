@@ -31,13 +31,13 @@
         </template>
         <template #modal-footer="{cancel}" class="p-0">
             <b-row>
-                <b-col sm="12" md="6">
-                    <b-button variant="danger" @click="cancel()">
+                <b-col sm="12" lg="6" class="p-1">
+                    <b-button variant="danger" block @click="cancel()">
                         Cancelar
                     </b-button>
                 </b-col>
-                <b-col sm="12" md="6">
-                    <b-button variant="success" >
+                <b-col sm="12" lg="6" class="p-1">
+                    <b-button variant="success" block>
                         Guardar
                     </b-button>
                 </b-col>
@@ -48,15 +48,15 @@
             <!-- Contenedor de Entrada y Salida de Variables -->
             <b-row  align-v="center">
                 <!-- Contenedor de Entrada de Variables -->
-                <b-col sn="12" md="6">
+                <b-col sn="12" lg="6">
                     <b-row align-v="center">
-                        <b-col sm="12" md="3">
+                        <b-col sm="12" lg="3">
                             <label for="input-small" class="text-white">Variable de entrada:</label>
                         </b-col>
-                        <b-col sm="12" md="4">
+                        <b-col sm="12" lg="4">
                             <b-form-input id="input-small" size="sm" v-model="newVarIn" placeholder="Variable"></b-form-input>
                         </b-col>
-                        <b-col sm="12" md="4">
+                        <b-col sm="12" lg="4">
                             <b-form-select
                                 v-model="newVarSelected"
                                 :options="tipoVariables"
@@ -71,26 +71,29 @@
                             </b-form-select>
                         </b-col>
                         <b-col sm="1">
-                            <b-button class="m-1" variant="primary" size="sm" @click="agregarVariable(true)">+</b-button>
+                            <b-button class="m-1" variant="primary" size="sm" @click="agregarVariable(true)">
+                                <font-awesome-icon icon="plus-circle"/>
+                            </b-button>
                         </b-col>
                     </b-row>
                 </b-col>
                 <!-- Contenedor de Entrada de Variables -->
                 <!-- Contenedor de Salida de Variables -->
-                <b-col sn="12" md="6">
+                <b-col sn="12" lg="6">
                     <b-row align-v="center">
-                        <b-col sm="12" md="6" class="text-right">
+                        <b-col sm="12" lg="6" class="text-right">
                             <b-form-checkbox
                                 id="chbReturnVar"
                                 v-model="checkVarReturn"
                                 name="chbReturnVar"
                                 value="true"
                                 class="text-white ml-auto"
+                                @change="selectVarOut"
                             >
                                 Variable de retorno
                             </b-form-checkbox>
                         </b-col>
-                        <b-col sm="12" md="6">
+                        <b-col sm="12" lg="6">
                             <b-form-select
                                 v-model="varReturnSelected"
                                 :options="variables.items"
@@ -99,6 +102,7 @@
                                 class="m-1"
                                 size="sm"
                                 :disabled="!checkVarReturn"
+                                @change="adicionarVarSalida"
                             >
                                 <template #first>
                                 <b-form-select-option :value="null" disabled
@@ -116,7 +120,7 @@
         <b-container class="pt-2 pb-2" fluid>
             <b-row>
                 <!-- Contenedor del editor de texto -->
-                <b-col sm="12" md="9">
+                <b-col sm="12" lg="9">
                     <codemirror
                     v-model="code"
                     :options="cmOptions"
@@ -125,7 +129,7 @@
                 </b-col>
                 <!-- /Contenedor del editor de texto -->
                 <!-- Contenedor de variables, constantes y errrores -->
-                <b-col sm="12" md="3">
+                <b-col sm="12" lg="3">
                     <!-- Acordeon de Variable -->
                     <div class="mb-2">
                         <b-button
@@ -157,7 +161,9 @@
                                     <b-form-select-option :value="null" disabled>-- Tipo --</b-form-select-option>
                                 </template>
                                 </b-form-select>
-                                <b-button class="m-1" variant="primary" size="sm" @click="agregarVariable(false)">+</b-button>
+                                <b-button class="m-1" variant="primary" size="sm" @click="agregarVariable(false)">
+                                    <font-awesome-icon icon="plus-circle"/>
+                                </b-button>
                             </div>
                             <!-- /Formulario de Adicion de Variable -->
                             <!-- Tabla de Variables -->
@@ -167,6 +173,7 @@
                                 primary-key="id"
                                 :items="variables.items"
                                 :fields="variables.fields"
+                                v-if="variables.items.length!==0"
                             >
                                 <template #cell(var)="data">
                                     <b-button size="sm" variant="light" @click="eliminarVariable(data.item.id)">
@@ -224,7 +231,9 @@
                             placeholder="Valor"
                             v-model="constantes.newVal"
                             />
-                            <b-button class="m-1" variant="primary" size="sm" @click="agregarConstante">+</b-button>
+                            <b-button class="m-1" variant="primary" size="sm" @click="agregarConstante">
+                                <font-awesome-icon icon="plus-circle"/>
+                            </b-button>
                         </div>
                         <!-- /Formulario de Adicion de Constante -->
                         <!-- Tabla de Constantes -->
@@ -234,6 +243,7 @@
                             primary-key="id"
                             :items="constantes.items"
                             :fields="constantes.fields"
+                            v-if="constantes.items.length!==0"
                         >
                             <template #cell(var)="data">
                                 <b-button size="sm" variant="light" @click="eliminarConstante(data.item.id)">
@@ -269,6 +279,7 @@
                             primary-key="id"
                             :items="error.items"
                             :fields="error.fields"
+                            v-if="error.items.length!==0"
                         ></b-table>
                         <!-- /Tabla de Errores -->
                         </b-card>
@@ -342,6 +353,22 @@ export default{
         tipoVariables: Array
     },
     methods:{
+        selectVarOut(){
+            if(!this.checkVarReturn)
+            {
+                this.variables.items.forEach(itm => {
+                    itm.out = false
+                })
+                this.varReturnSelected = null
+            }    
+        },
+        adicionarVarSalida(){
+            this.variables.items.forEach(itm => {
+                itm.out = false
+                if(itm.id == this.varReturnSelected)
+                    itm.out = true
+            })
+        },
         agregarVariable(varIn){
             var va = null;
             var slct = null;
@@ -353,7 +380,7 @@ export default{
                 slct = this.variables.selected
             }
             console.log(varIn, slct, va)
-            const variable = new RegExp("^[a-zA-Z]+([-_][a-zA-Z0-9]+)*$").test(va)?va:null;
+            const variable = new RegExp("^[a-zA-Z]+([-_]?[a-zA-Z0-9]+)*$").test(va)?va:null;
             const tipo = this.tipoVariables.find(el => el.value == slct).text
             let id = this.variables.items.length + 1100
             if(variable!=null && tipo!=null)
@@ -376,7 +403,7 @@ export default{
             }
         },
         agregarConstante(){
-            let ctte = new RegExp("^[a-zA-Z]+([-_][a-zA-Z0-9]+)*$").test(this.constantes.newCtte)?this.constantes.newCtte:null;
+            let ctte = new RegExp("^[a-zA-Z]+([-_]?[a-zA-Z0-9]+)*$").test(this.constantes.newCtte)?this.constantes.newCtte:null;
             let valor = this.constantes.newVal
             let tipo = this.tipoVariables.find(el => el.value == this.constantes.selected).text;
             let valorTipo = this.tipoVariables.find(el => el.value == this.constantes.selected).value;
@@ -396,6 +423,11 @@ export default{
                 break;
                 case 3:
                 regex = new RegExp("^[0-9]+([.][0-9]+)?$")
+                if(regex.test(valor))
+                    sw = true
+                break;
+                case 4:
+                regex = new RegExp("(true|false)$")
                 if(regex.test(valor))
                     sw = true
                 break;

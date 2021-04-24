@@ -1,10 +1,10 @@
 <template>
-  <div class="container-fluid">
-    <div class="row">
-      <div class="col-12">
-        <div class="row" id="main">
+  <b-container fluid>
+    <b-row>
+      <b-col sm="12" md="12">
+        <b-row>
           <!-- Contenedor de Editor de Texto -->
-          <div class="col-9 p-2 h-100">
+          <b-col sm="12" md="9" class="my-2">
             <div class="border rounded border-light" id="pnl_pseudo">
               <!-- Primer header de editor de texto -->
               <div class="bg-dark d-flex justify-content-between small">
@@ -62,6 +62,7 @@
                   variant="success"
                   class="rounded-0"
                   size="sm"
+                  @click="verificaSintaxisPseudo"
                   >Generar</b-button
                 >
               </div>
@@ -100,9 +101,10 @@
               ></codemirror>
               <!-- /Editor de Texto -->
             </div>
-          </div>
-          <!-- Contenedores -->
-          <div class="col-3 p-2 h-100">
+          </b-col>
+          <!-- /Contenedor de Editor de Texto -->
+          <!-- Contenedores de Variables, Constantes, Procedimientos y Errores -->
+          <b-col sm="12" md="3" class="my-2">
             <!-- Acordeon de Variable -->
             <div class="mb-2">
               <b-button
@@ -111,8 +113,8 @@
                 block
                 class="text-left text-dark"
               >
-                <i class="fas fa-i-cursor fa-sm mr-1"></i>
-                <span class="ms-2">Variables</span>
+                <font-awesome-icon icon="i-cursor"/>
+                <span class="ml-2">Variables</span>
               </b-button>
               <b-collapse id="collapse-var" visible>
                 <b-card no-body class="p-0">
@@ -137,7 +139,9 @@
                         <b-form-select-option :value="null" disabled>-- Tipo --</b-form-select-option>
                       </template>
                     </b-form-select>
-                    <button class="btn btn-sm btn-primary m-1" @click="agregarVariable">+</button>
+                    <button class="btn btn-sm btn-primary m-1" @click="agregarVariable">
+                      <font-awesome-icon icon="plus-circle"/>
+                    </button>
                   </div>
                   <!-- /Formulario de Adicion de Variable -->
                   <!-- Tabla de Variables -->
@@ -147,6 +151,7 @@
                     primary-key="id"
                     :items="variables.items"
                     :fields="variables.fields"
+                    v-if="variables.items.length!==0"
                   >
                     <template #cell(var)="data">
                       <b-button size="sm" variant="light" @click="eliminarVariable(data.item.id)">
@@ -167,8 +172,8 @@
                 block
                 class="text-left text-dark"
               >
-                <i class="fas fa-i-cursor fa-sm mr-1"></i>
-                <span class="ms-2">Constantes</span>
+                <font-awesome-icon icon="i-cursor"/>
+                <span class="ml-2">Constantes</span>
               </b-button>
               <b-collapse id="collapse-const" class="mb-2" visible>
                 <b-card no-body class="p-0">
@@ -200,7 +205,9 @@
                       v-model="constantes.newVal"
                       trim
                     />
-                    <b-button class="m-1" size="sm" variant="primary" @click="agregarConstante">+</b-button>
+                    <b-button class="m-1" size="sm" variant="primary" @click="agregarConstante">
+                      <font-awesome-icon icon="plus-circle"/>
+                    </b-button>
                   </div>
                   <!-- /Formulario de Adicion de Constante -->
                   <!-- Tabla de Constantes -->
@@ -210,6 +217,7 @@
                     primary-key="id"
                     :items="constantes.items"
                     :fields="constantes.fields"
+                    v-if="constantes.items.length!==0"
                   >
                     <template #cell(var)="data">
                         <b-button size="sm" variant="light" @click="eliminarConstante(data.item.id)">
@@ -230,8 +238,8 @@
                 block
                 class="text-left text-dark"
               >
-                <i class="fas fa-i-cursor fa-sm mr-1"></i>
-                <span class="ms-2">Procedimientos</span>
+                <font-awesome-icon icon="i-cursor"/>
+                <span class="ml-2">Procedimientos</span>
               </b-button>
               <b-collapse id="collapse-proc" class="mb-2">
                 <b-card no-body class="p-0">
@@ -253,6 +261,7 @@
                     primary-key="id"
                     :items="procedimientos.items"
                     :fields="procedimientos.fields"
+                    v-if="procedimientos.items.length!==0"
                   >
                     <template #cell(id)="data">
                       <button class="btn btn-sm btn-danger m-1" @click="eliminarVariable(data.value)">-</button>
@@ -271,8 +280,8 @@
                 block
                 class="text-left text-dark"
               >
-                <i class="fas fa-i-cursor fa-sm mr-1"></i>
-                <span class="mr-3">Errores</span>
+                <font-awesome-icon icon="i-cursor"/>
+                <span class="mx-2">Errores</span>
                 <b-badge variant="danger" :v-model="error.items.lenght">{{
                   error.items.length
                 }}</b-badge>
@@ -286,17 +295,20 @@
                     primary-key="id"
                     :items="error.items"
                     :fields="error.fields"
+                    v-if="error.items.length!==0"
                   ></b-table>
                   <!-- /Tabla de Errores -->
                 </b-card>
               </b-collapse>
             </div>
             <!-- /Acordeon de Errores -->
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
+          </b-col>
+          <!-- /Contenedores de Variables, Constantes, Procedimientos y Errores -->
+        </b-row>
+      </b-col>
+      <b-col sm="12" md="12"></b-col>
+    </b-row>
+  </b-container>
 </template>
 
 <script>
@@ -321,7 +333,7 @@ export default {
         }
       },
       parametricas:[],
-      code: 'algo := 5;\nif &var>=0 then\nwrite("Numero positivo");\nelse\nwrite("Numero negativo");',
+      code: 'algo := 5;\nfor i=0 to n do\nwrite("Numero positivo");\nwrite("Numero negativo");',
       cmOptions: {
         // codemirror options
         tabSize: 4,
@@ -357,18 +369,20 @@ export default {
         items: [],
       },
       procedimientos:{
-        fields: [{key:"procedure", label: "Procedimiento"}, 
-                  {key:"procIn", label:"Entrada"},
-                  {key:"procOut", label:"Salida"},
-                  {key:"id", label:""}],
+        fields: [
+          {key:"procedure", label: "Procedimiento"},
+          {key:"procIn", label:"Entrada"},
+          {key:"procOut", label:"Salida"},
+          {key:"id", label:""}
+        ],
         items: [],
       },
       error: {
-        fields: ["Ln.", "Descripcion"],
-        items: [
-          { Ln: 1, Descripcion: "Esta es una descripcion" },
-          { Ln: 2, Descripcion: "Segunda descripcion de la tabla de errores" },
+        fields: [
+          {key:"line", label: "Ln."},
+          {key:"description", label: "Descripcion"}
         ],
+        items: [],
       },
     };
   },
@@ -383,7 +397,7 @@ export default {
     this.$store.dispatch('cleanLenguajesAction')
     this.$store.dispatch('cleanParametricasAction')
     this.extraeLenguajes();
-    this.extraeParametricas();
+    this.extraeParametricas()
   },
   methods: {
     extraeLenguajes(){
@@ -410,20 +424,18 @@ export default {
           });
       })
     },
-    extraeParametricas(){
+    async extraeParametricas(){
           this.$parametros = []
-          db.collection("T_Parametrica").get()
-          .then(data=>{
-              data.forEach(line => {
-                this.$store.state.stParametrica = line.data()
-                this.$store.dispatch('addParametricasAction')
-                this.$parametros.push(line.data())
-                this.$store.state.stParametrica = null
-              });
+          const col = await db.collection("T_Parametrica").orderBy('prioridad').get()
+          col.docs.forEach(data => {
+              this.$store.state.stParametrica = data.data()
+              this.$store.dispatch('addParametricasAction')
+              this.$parametros.push(data.data())
+              this.$store.state.stParametrica = null
           })
     },
     agregarVariable(){
-      let variable = new RegExp("^[a-zA-Z]+([-_][a-zA-Z0-9]+)*$").test(this.variables.newVar)?this.variables.newVar:null;
+      let variable = new RegExp("^[a-zA-Z]+([-_]?[a-zA-Z0-9]+)*$").test(this.variables.newVar)?this.variables.newVar:null;
       let tipo = this.tiposVarCons.find(el => el.value == this.variables.selected).text;
       let id = this.variables.items.length + 100
       if(variable!=null && tipo!=null)
@@ -445,7 +457,7 @@ export default {
       }
     },
     agregarConstante(){
-      let ctte = new RegExp("^[a-zA-Z]+([-_][a-zA-Z0-9]+)*$").test(this.constantes.newCtte)?this.constantes.newCtte:null;
+      let ctte = new RegExp("^[a-zA-Z]+([-_]?[a-zA-Z0-9]+)*$").test(this.constantes.newCtte)?this.constantes.newCtte:null;
       let valor = this.constantes.newVal
       let tipo = this.tiposVarCons.find(el => el.value == this.constantes.selected).text;
       let valorTipo = this.tiposVarCons.find(el => el.value == this.constantes.selected).value;
@@ -468,6 +480,11 @@ export default {
           if(regex.test(valor))
             sw = true
           break;
+        case 4:
+          regex = new RegExp("(true|false)$")
+          if(regex.test(valor))
+            sw = true
+          break;
       }
       if(sw && ctte!=null && valor!=null){
         this.constantes.items.push({id: id, var: ctte, tipo: tipo, valor: valor})
@@ -484,41 +501,221 @@ export default {
     {
       this.cmOptions.mode = this.lenguajes.in.data.find(el => el.idLenguaje == this.lenguajes.in.selected).libCodemirror
       console.log(this.cmOptions)
+    },
+    verificaSintaxisPseudo(){
+      console.log(this.genera(this.code))
+    },
+    Var(name,value,type){
+      this.name=name;
+      this.value=value;
+      this.type=type;
+      this.asigTipo=()=>{
+        return ({
+          token:'ASIGTIPO',
+          children:[
+            'var',
+            this.name,
+            ':=',
+            this.value,
+            ':',
+            this.type,
+            ';'
+          ]
+        })
+      }
+      this.asigVar=()=>{
+        return ({
+          token:'ASIGVAR',
+          children:[
+            this.name,
+            ':=',
+            this.value,
+            ';'
+          ]
+        })
+      }
+    },
+    For(init,limit){
+      this.init=init;
+      this.limit=limit;
+      //this.children=genera(tmpString);
+      this.display=()=>{
+        return ({
+          token:'BUFOR',
+          children:[
+            'for',
+            this.init,
+            'to',
+            this.limit,
+            'do',
+            this.children
+          ]
+        })
+      }
+    },
+    Arit(value1,operator,value2){
+      this.value1=value1;
+      this.value2=value2;
+      this.operator=operator;
+      this.display=()=>{
+        return ({
+          token:'OPEARIT',
+          children:[
+            this.value1,
+            this.operator,
+            this.value2
+          ]
+        })
+      }
+    },
+    Read(value){
+      this.value=value;
+      this.display=()=>{
+        return({
+          token:'DATREAD',
+          children:[
+            'read',
+            '(',
+            this.value,
+            ')',
+            ';'
+          ]
+        })
+      }
+    },
+    Block(){
+      //this.children=genera(stringChildren);
+      this.addChildren=(child)=>{
+        this.children.push(child);
+      }
+      this.display=()=>{
+        return ({
+          token:'BLOCOD',
+          children:[
+            'begin',
+            this.children,
+            'end'
+          ]
+        })
+      }
+    },
+    Write(value){
+      this.value=value;
+      this.display=()=>{
+        return({
+          token:'DATWRITE',
+          children:[
+            'write',
+            '(',
+            this.value,
+            ')',
+            ';'
+          ]
+        })
+      }
+    },
+    cases(values,args,stringChildren){
+      let tmp='';
+      let regSpace=new RegExp(/\S+/,'g');
+      switch(values){
+        case 'ASIGVAR':
+          if((args.input.indexOf('var'))!==-1){
+            tmp=args.input.match(regSpace).join('')
+            tmp=tmp.split(/(var|:=|:|;)/)
+            tmp=new this.Var(tmp[2],tmp[4],tmp[6])
+            return tmp.asigTipo();
+          }else{
+            tmp=args[0].match(regSpace).join('')
+            tmp=tmp.split(/(:=|:)/)
+            tmp=new this.Var(tmp[0],tmp[2])
+            return tmp.asigVar();
+          }
+        case 'BUFOR':
+          tmp = new this.For(args[1],args[2],stringChildren)
+          return tmp.display()
+        case 'DATREAD':
+          tmp=new this.Read(args[1])
+          return tmp.display();
+        case 'DATWRITE':
+          tmp =new this.Write(args[1])
+          return tmp.display();
+        case 'BLOCOD':
+          tmp =new this.Block(stringChildren)
+          return tmp.display();
+        default:
+          '';
+      }
+    },
+    obtieneKeys(lines){
+      let pivote=1;
+      let tmpPivote=0;
+      let beforeLine='';
+      let sw = false;
+      var parmA = this.$store.state.stParametricas.filter(d => d.prioridad==0)
+      return lines.split("\n").map((line)=>{
+        for(const regA of parmA){
+          console.log(regA, line)
+
+          if(beforeLine.match(regA.expresionEstructura==''?regA.inicioEstructura:regA.expresionEstructura) && regA.token!=='BLOCOD' && !/begin/.test(line.trim())){
+            sw = true;
+            pivote+=1;
+            break;
+          }
+        }
+        tmpPivote=pivote;
+        //Si la linea Coincide con PrioridadA Significa que habra un bloque de codigo o unsa sola linea
+        for(const regA in parmA){
+          if(line.match(regA.expresionEstructura==''?regA.inicioEstructura:regA.expresionEstructura)){
+            pivote+=1;
+            break;
+          }
+        }
+        if(/end/.test(line)||sw){
+          sw=false;
+          tmpPivote-=1;
+          pivote-=2;
+        }
+        beforeLine=line;
+        return tmpPivote;
+      })
+    },
+    genera(lines){
+      let keys=this.obtieneKeys(lines)
+      let j=0
+      let nodo=[]
+      let parmA = this.$store.state.stParametricas.filter(d => d.prioridad==0)
+      let parmB = this.$store.state.stParametricas.filter(d => d.prioridad==1)
+      //var parmC = this.$store.state.stParametricas.filter(d => d.prioridad==2)
+      lines = lines.split('\n')
+      while(j<lines.length){
+        let sw=true;
+
+        for(const regA of parmA){
+          let regx = lines[j].match(regA.expresionEstructura==''?regA.inicioEstructura:regA.expresionEstructura)
+          if(regx){
+            let lastIndex=keys.indexOf(keys[j],j+1)
+            let Mj=lastIndex===-1?lines.length:lastIndex;
+            let subArray=lines.slice(j+1,lines.length-j)
+            nodo.push(this.cases(regA.token,regx,subArray))
+            sw=false;
+            j=Mj;
+            j++
+            break;
+          }
+        }
+        if(sw){
+          for(const regB of parmB){
+            let regx = lines[j].match(regB.expresionEstructura==''?regB.inicioEstructura:regB.expresionEstructura)
+            if(regx){
+              nodo.push(this.cases(regB.token,regx))
+              j++;
+              break;
+            }
+          }
+        }
+      }
+      return nodo
     }
-    /* async verificaSintaxisPseudo(){
-            console.log(this.code)
-            let i = 0
-            this.code.split("\n").forEach((value, line) =>{
-                let linea = value.trim();
-                if(linea!=="")
-                {
-                    let findAnswer = {
-                        linea: i,
-                        token: null,
-                        parent: null,
-                        valor: this.nombreArchivo,
-                        children:[]
-                    }
-                    this.$parametros.forEach(parm => {
-                        var expreg = parm.expresionEstructura===''?parm.inicioEstructura:parm.expresionEstructura
-                        var regex = new RegExp(expreg)
-                        let newChildren = findAnswer
-                        if(regex.test(linea)){
-                            newChildren.linea = i //Set linea
-                            newChildren.token = parm.token //Set token
-                            newChildren.parent = "" //Set parent
-                            for(let j=0; j<=i; j++)
-                            {
-                                newChildren = newChildren.children
-                            }
-                            console.log(line+1, expreg, parm.token, linea)
-                        }else{
-                            //console.log(line+1, "no es")
-                        }
-                    })
-                }
-            })
-        } */
-  },
+  }
 };
 </script>

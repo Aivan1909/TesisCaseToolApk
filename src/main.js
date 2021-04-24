@@ -28,10 +28,10 @@ Vue.use(VueCodemirror, /* {
 } */)
 
 import { library } from '@fortawesome/fontawesome-svg-core'
-import { faFile, faFolderOpen, faSave, faLifeRing, faPlusCircle, faEdit, faTimes, faCheck, faTrash } from '@fortawesome/free-solid-svg-icons'
+import { fas } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 
-library.add(faFile, faFolderOpen, faSave, faLifeRing, faPlusCircle, faEdit, faTimes, faCheck, faTrash)
+library.add(fas)
 
 Vue.component('font-awesome-icon', FontAwesomeIcon)
 
