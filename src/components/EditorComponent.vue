@@ -316,6 +316,7 @@ import { codemirror } from "vue-codemirror";
 import { db } from "./../firebase.js";
 
 import mdlProcedimiento from "./ModalProcedimiento.vue"
+/* import Arbol from './../class/Arbol.js' */
 
 export default {
   data() {
@@ -332,6 +333,7 @@ export default {
           data: []
         }
       },
+      codeGenerado: "",
       parametricas:[],
       code: 'algo := 5;\nfor i=0 to n do\nwrite("Numero positivo");\nwrite("Numero negativo");',
       cmOptions: {
@@ -400,6 +402,7 @@ export default {
     this.extraeParametricas()
   },
   methods: {
+    //#region Metodos de variables, ctts, proc, err
     extraeLenguajes(){
       this.lenguajes.in.data = []
       this.lenguajes.out.data = []
@@ -428,10 +431,10 @@ export default {
           this.$parametros = []
           const col = await db.collection("T_Parametrica").orderBy('prioridad').get()
           col.docs.forEach(data => {
-              this.$store.state.stParametrica = data.data()
-              this.$store.dispatch('addParametricasAction')
-              this.$parametros.push(data.data())
-              this.$store.state.stParametrica = null
+            this.$store.state.stParametrica = data.data()
+            this.$store.dispatch('addParametricasAction')
+            /* this.$parametros.push(data.data()) */
+            this.$store.state.stParametrica = null
           })
     },
     agregarVariable(){
@@ -502,9 +505,164 @@ export default {
       this.cmOptions.mode = this.lenguajes.in.data.find(el => el.idLenguaje == this.lenguajes.in.selected).libCodemirror
       console.log(this.cmOptions)
     },
-    verificaSintaxisPseudo(){
-      console.log(this.genera(this.code))
+    //#endregion
+    //#region IvanTePaz
+    async verificaSintaxisPseudo(){
+      this.error.items = []
+
+      this.codeGenerado = ""
+      let nodo = {token: this.nombreArchivo, level: 0, children: []}
+      //Armado de la primera iteracion del arbol
+      await this.code.split('\n').forEach((linea, i)=>{
+        if(linea!=""){
+          this.analizarLinea(linea.trim()).then(token => {
+            if(token!=null){
+              this.nuevoNodo(linea, token).then(child => {
+                nodo.children.push(child)
+              })
+              .catch(error => console.log(error));
+            }else{
+              this.error.items.push({line: i+1, description:"Error de Sintaxis"})
+            }
+          }).catch(() => 
+            this.error.items.push({line: i+1, description:"Error de Sintaxis"})
+          )
+        }
+      })
+      this.codeGenerado = await nodo
+      //--Armado de la primera iteracion del arbol
+      //let res = []
+      //await console.log(this.recorreArbol(nodo.children, res))
+
+      //Limpieza de las estructuras
+      await this.limpiarNodos(this.codeGenerado)
+      //--Limpieza de las estructuras
     },
+    async recorreArbol(obj=null, result=[]){
+      if (!Array.isArray(obj)){
+          result.push(obj);
+      } else {
+        for (let i=0; i<obj.length; i++){
+          this.recorreArbol(obj[i], result);
+        }
+      }
+      return await result;
+    },
+    async limpiarNodos(arbol){
+      await arbol.children.forEach(nodo => {
+        nodo.children.forEach(hoja => {
+          hoja = "ENTRA"
+          this.analizarCampo(hoja).then(token => {
+            if(token!=null)
+              this.nuevoNodo(hoja, token).then(() => {
+                hoja = "ENTRA"//newNodo
+              })
+          })
+        })
+      })
+      this.codeGenerado = await arbol
+    },
+    analizarLinea(linea){
+      return new Promise((resolve, reject)=>{
+        this.$store.getters.getParametricas.forEach(parm => {
+          let rgx = ""
+          if (parm.expresionEstructura!="")
+            rgx = parm.expresionEstructura
+          else
+            rgx = parm.inicioEstructura
+          let val = new RegExp(rgx)
+          if (val.test(linea))
+            resolve(parm.token)
+        })
+        reject(false)
+      })
+    },
+    async nuevoNodo(cadena, token)
+    {
+      let nodo = {"token":token, "level":0, "children":[]}
+      await this.armarSplit(cadena, token).then(node => {
+        nodo.children = node
+      })
+      if(nodo)
+      return await nodo
+    },
+    async armarSplit(cadena, token){
+      let separador
+      let sw = true
+      switch (token)
+      {
+        case 'OPEARIT':
+          separador = cadena.split('+').join('Ø+Ø').split('-').join('Ø-Ø').split('*').join('Ø*Ø').split('/').join('Ø/Ø')
+          break;
+        case 'OPEREL':
+          separador = cadena.split('=').join('Ø=Ø').split('<').join('Ø<Ø').split('<=').join('Ø<=Ø').split('>=').join('Ø>=Ø').split('<>').join('Ø<>Ø')
+          break;
+        case 'OPELOG':
+          separador = cadena.split('not').join('ØnotØ').split('and').join('ØandØ').split('or').join('ØorØ')
+          break;
+        case 'CONCASE':
+          separador = cadena.split('case').join('caseØ').split('of').join('ØofØ')
+          break;
+        case 'BUFOR':
+          separador = cadena.split('for').join('forØ').split('to').join('ØtoØ').split('do').join('Ødo')
+          break;
+        case 'BUWHILE':
+          separador = cadena.split('while').join('whileØ').split('do').join('Ødo')
+          break;
+        case 'DATREAD':
+          separador = cadena.split('read').join('readØ').split('(').join('(Ø').split(')').join('Ø)').split(';').join('Ø;')
+          break;
+        case 'DATWRITE':
+          separador = cadena.split('write').join('writeØ').split('(').join('(Ø').split(')').join('Ø)').split(';').join('Ø;')
+          break;
+        case 'CONIF':
+          separador = cadena.split('if').join('ifØ').split('then').join('thenØ')
+          break;
+        case 'ASIGVAR':
+          separador = cadena.split('var').join('varØ').split(',').join('Ø,Ø').split(':=').join('Ø:=Ø').split('+').join('Ø+Ø').split('-').join('Ø-Ø').split('*').join('Ø*Ø').split('/').join('Ø/Ø').split(';').join('Ø;')
+          break;
+        case 'COMSIM':
+          separador = cadena.split('//').join('//Ø')
+          break;
+        default:
+          sw = false
+          break;
+      }
+      return await sw?separador.split('Ø').map(item=>item.trim()):[];
+    },
+    verificaEstructura(cadena){
+      let res = ""
+      cadena.split('Ø').forEach(elm => {
+        this.analizarLinea(elm).then(token => {
+          if(token!=null){
+            this.nuevoNodo(elm, token).then(child => {
+              res += `${child}Ø`
+            })
+            .catch(error => console.log(error));
+          }else{
+            res += elm+"Ø"
+          }
+        }).catch(error => console.log(error));
+      })
+      return res.substr(0, res.length-1)
+    },
+    async analizarCampo(campo){
+      let token
+      await this.$store.getters.getParametricas.forEach(parm => {
+        let rgx = ""
+        if (parm.expresionEstructura!="")
+          rgx = parm.expresionEstructura.replace(";", "")
+        else
+          rgx = parm.inicioEstructura.replace(";", "")
+        let val = new RegExp(rgx)
+        if (val.test(campo))
+          token = parm.token
+      })
+      return await token
+    },
+    //#endregion
+
+    //#region LUIGI
     Var(name,value,type){
       this.name=name;
       this.value=value;
@@ -694,11 +852,11 @@ export default {
           let regx = lines[j].match(regA.expresionEstructura==''?regA.inicioEstructura:regA.expresionEstructura)
           if(regx){
             let lastIndex=keys.indexOf(keys[j],j+1)
-            let Mj=lastIndex===-1?lines.length:lastIndex;
+            let Mj=lastIndex===-1?lines.length:lastIndex
             let subArray=lines.slice(j+1,lines.length-j)
             nodo.push(this.cases(regA.token,regx,subArray))
-            sw=false;
-            j=Mj;
+            sw=false
+            j=Mj
             j++
             break;
           }
@@ -716,6 +874,7 @@ export default {
       }
       return nodo
     }
+    //#endregion
   }
 };
 </script>
