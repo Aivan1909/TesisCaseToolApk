@@ -10,14 +10,17 @@ import BootstrapVue from 'bootstrap-vue'
 // Import Bootstrap an BootstrapVue CSS files (order is important)
 import 'bootstrap/dist/css/bootstrap.css'
 import 'bootstrap-vue/dist/bootstrap-vue.css'
+import { ModalPlugin } from 'bootstrap-vue'
 
 // Make BootstrapVue available throughout your project
 Vue.use(BootstrapVue)
+Vue.use(ModalPlugin)
 
 import VueCodemirror from 'vue-codemirror'
 // require styles
 import 'codemirror/lib/codemirror.css'
 import 'codemirror/mode/pascal/pascal.js';
+import 'codemirror/mode/python/python.js';
  
 // require more codemirror resource...
  

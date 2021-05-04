@@ -16,7 +16,8 @@ export default new Vuex.Store({
     stProcedimientos: [],
     stProcedimiento: null,
     stErrores: [],
-    stError: null
+    stError: null,
+    codePython: ""
   },
   mutations: {
     addLenguajes(state){
@@ -51,7 +52,10 @@ export default new Vuex.Store({
     },
     deleteVariable(state){
       state.stVariables.splice(parseInt(state.stVariable), 1)
-    }
+    },
+    setCodepython(state){
+      state.codePython
+    },
   },
   actions: {
     addLenguajesAction(context){
@@ -80,7 +84,10 @@ export default new Vuex.Store({
     },
     deleteVariableAction(context){
       context.commit('deleteVariable')
-    }
+    },
+    setCodepythonAction(context){
+      context.commit('setCodepython')
+    },
   },
   getters: {
     getLenguajes(state){
@@ -100,6 +107,9 @@ export default new Vuex.Store({
     },
     getErrores(state){
       return state.stErrores
+    },
+    getCodePython(state){
+      return state.codePython
     }
   },
 });

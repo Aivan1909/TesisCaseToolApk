@@ -24,11 +24,11 @@
                           size="sm"
                           @change="setModeCodemirrorIn"
                         >
-                          <template #first>
+                          <!-- <template #first>
                             <b-form-select-option :value="null" disabled
                               >-- Entrada --</b-form-select-option
                             >
-                          </template>
+                          </template> -->
                         </b-form-select>
                       </b-col>
                     </b-row>
@@ -47,24 +47,24 @@
                           class="m-1"
                           size="sm"
                         >
-                          <template #first>
+                          <!-- <template #first>
                             <b-form-select-option :value="null" disabled
                               >-- Salida --</b-form-select-option
                             >
-                          </template>
+                          </template> -->
                         </b-form-select>
                       </b-col>
                     </b-row>
                   </b-col>
                 </b-row>
                 <b-button
-                  v-b-modal.modal-generarCodigo
+                  v-b-modal.mdlCodigoGenerado
                   variant="success"
                   class="rounded-0"
                   size="sm"
-                  @click="verificaSintaxisPseudo"
-                  >Generar</b-button
-                >
+                >Generar
+                </b-button>
+                <mdlCodigoGenerado :codigo="codePython" :tituloPseudo="nombreArchivo"/>
               </div>
               <!-- /Primer header de editor de texto -->
               <!-- Segundo header de editor de texto -->
@@ -93,11 +93,13 @@
                   <!-- /Modal Cambio de Nombre -->
               </div>
               <!-- /Segundo header de editor de texto -->
-              <!-- Editor de Texto -->
+              <!-- Editor de Texto verificaSintaxisPseudo-->
               <codemirror
                 v-model="code"
+                :value="code"
                 :options="cmOptions"
                 class="text-left w-100"
+                @input="pruebaSin1"
               ></codemirror>
               <!-- /Editor de Texto -->
             </div>
@@ -254,7 +256,6 @@
                   </div>
                   <!-- /Formulario de Adicion de Constante -->
                   <!-- Tabla de Procedimientos -->
-                  <!-- TODO -->
                   <b-table
                     hover
                     small
@@ -264,7 +265,7 @@
                     v-if="procedimientos.items.length!==0"
                   >
                     <template #cell(id)="data">
-                      <button class="btn btn-sm btn-danger m-1" @click="eliminarVariable(data.value)">-</button>
+                      <button class="btn btn-sm btn-danger m-1" @click="eliminarProcedimiento(data.value)">-</button>
                     </template>
                   </b-table>
                   <!-- /Tabla de Procedimientos -->
@@ -314,8 +315,10 @@
 <script>
 import { codemirror } from "vue-codemirror";
 import { db } from "./../firebase.js";
+import 'codemirror/mode/pascal/pascal.js';
 
-import mdlProcedimiento from "./ModalProcedimiento.vue"
+import mdlProcedimiento from "./ModalProcedimiento.vue";
+import mdlCodigoGenerado from "./ModalCodigoGenerado.vue"
 /* import Arbol from './../class/Arbol.js' */
 
 export default {
@@ -333,14 +336,14 @@ export default {
           data: []
         }
       },
-      codeGenerado: "",
+      codeGenerado: {},
+      codePython: "",
       parametricas:[],
-      code: 'algo := 5;\nfor i=0 to n do\nwrite("Numero positivo");\nwrite("Numero negativo");',
+      code: '',
       cmOptions: {
         // codemirror options
         tabSize: 4,
-        mode: "text/pascal",
-        theme: "base16-dark",
+        mode: "text/x-pascal",
         lineNumbers: true,
       },
       tiposVarCons: [
@@ -354,7 +357,7 @@ export default {
         newVarState: null,
         selected: null,
         fields: [
-          {key:"var", label: "Var"}, 
+          {key:"vari", label: "Var"}, 
           {key:"tipo", label:"Tipo"},
         ],
         items: []
@@ -386,6 +389,23 @@ export default {
         ],
         items: [],
       },
+      aux: {
+        id: 100,
+        idParent: null,
+        bloqueEsp: false,
+        pilaIds: [],
+        mapIndices: {},
+        caseSw: false,
+        caseFirst: false,
+        levelOriginal: 0,
+        levelAux: 0,
+        comentarioMultiple: false,
+        arbolObj: []
+      },
+      auxPy:{
+        forVariable: "",
+        forTope: ""
+      }
     };
   },
   firebase: {
@@ -393,7 +413,8 @@ export default {
   },
   components: {
     codemirror,
-    mdlProcedimiento
+    mdlProcedimiento,
+    mdlCodigoGenerado
   },
   created() {
     this.$store.dispatch('cleanLenguajesAction')
@@ -413,6 +434,7 @@ export default {
             this.$store.state.stLenguaje = line.data()
             this.$store.dispatch('addLenguajesAction')
             this.lenguajes.in.data.push(line.data())
+            this.lenguajes.in.selected = this.lenguajes.in.data[0].idLenguaje
             this.$store.state.stLenguaje = null
           });
       })
@@ -423,6 +445,7 @@ export default {
             this.$store.state.stLenguaje = line.data()
             this.$store.dispatch('addLenguajesAction')
             this.lenguajes.out.data.push(line.data())
+            this.lenguajes.out.selected = this.lenguajes.out.data[0].idLenguaje
             this.$store.state.stLenguaje = null
           });
       })
@@ -443,9 +466,9 @@ export default {
       let id = this.variables.items.length + 100
       if(variable!=null && tipo!=null)
       {
-        this.variables.items.push({id: id, var: variable, tipo: tipo})
+        this.variables.items.push({id: id, vari: variable, tipo: tipo})
         this.variables.newVar = this.variables.selected = null
-        this.$store.state.stVariable = {id: id, var: variable, tipo: tipo}
+        this.$store.state.stVariable = {id: id, vari: variable, tipo: tipo}
         this.$store.dispatch('addVariablesAction')
       }
     },
@@ -465,7 +488,7 @@ export default {
       let tipo = this.tiposVarCons.find(el => el.value == this.constantes.selected).text;
       let valorTipo = this.tiposVarCons.find(el => el.value == this.constantes.selected).value;
       let id = this.constantes.items.length + 200
-      console.log(id, tipo, this.constantes.selected)
+      /* console.log(id, tipo, this.constantes.selected) */
       let sw = false;
       let regex;
       switch (valorTipo) {
@@ -500,91 +523,521 @@ export default {
       if(i>=0)
         this.constantes.items.splice(i, 1)
     },
+    eliminarProcedimiento(id)
+    {
+      const i = this.procedimientos.items.indexOf(this.procedimientos.items.find(el => el.id==id))
+      if(i>=0)
+        this.procedimientos.items.splice(i, 1)
+    },
     setModeCodemirrorIn()
     {
-      this.cmOptions.mode = this.lenguajes.in.data.find(el => el.idLenguaje == this.lenguajes.in.selected).libCodemirror
-      console.log(this.cmOptions)
+      /* this.cmOptions.mode = this.lenguajes.in.data.find(el => el.idLenguaje == this.lenguajes.in.selected).libCodemirror
+      console.log(this.cmOptions) */
+    },
+    //#endregion
+    //#region GENERACION
+    async btn_Generar(){
+      let res= await this.cargarVarConsProc()
+      let pila = await this.myPilaObjetos
+      console.log("PILA:",pila)
+      /* pila.shift() */
+      for(let [i,hijo] of pila.entries()){
+        console.log("HIJO:", hijo, i)
+        if(hijo.token!==null){
+          let linea = ""
+          for(let [i, valor] of hijo.value.entries()){
+            let operadores = []
+            let j = i+1
+            valor = valor.replace(";", "")
+            if(this.aux.caseSw && hijo.level>0){
+              hijo.level = parseInt(hijo.level) - 1
+            }
+            /* console.log(hijo.token) */
+            switch (hijo.token)
+            {
+              case 'CONCASE':              
+                valor = valor.replace("of", "")
+                if (valor=="case"){
+                  valor = valor.replace("case", "")
+                  this.caseValor = hijo.value[j]
+                  hijo.value[j] = ""
+                  this.aux.caseSw = true
+                  this.aux.caseFirst = true
+                }
+
+                if(hijo.value[j]==":"){
+                  hijo.value[j] = ""
+                  let auxiConcatena =""
+                  let k = j + 1
+                  if(this.aux.caseFirst){
+                    valor = `if ${this.caseValor}==${valor} :`
+                    this.aux.caseFirst = false
+                  }else{
+                    valor = `elif ${this.caseValor}==${valor} :`
+                  }
+                  if(hijo.value[k].includes("write")){
+                    auxiConcatena = hijo.value[k].replace("write", "print")
+                    console.log(auxiConcatena)
+                    hijo.value[k] = ""
+                    let espacio = '    '.repeat(hijo.level)
+                    valor += `\n${espacio}   ${auxiConcatena}`
+                  }
+                }
+                break;
+              case 'BUFOR':
+                if(valor.includes(":=")){
+                  this.auxPy.forVariable = valor.split(":=")[0]
+                  this.auxPy.forTope = valor.split(":=")[1]
+                  valor = this.auxPy.forVariable
+                }
+                if(this.auxPy.nextRange){
+                  valor = `range(${this.auxPy.forTope}, ${valor})`
+                  this.auxPy.nextRange = false
+                }
+                if(valor=="to")
+                  this.auxPy.nextRange = true
+                valor = valor.replace(" to", "in")
+                valor = valor.replace(" do", ":")
+                break;
+              case 'BUWHILE':
+                valor = valor.replace("=", "==")
+                valor = valor.replace("<>", "!=")
+                valor = valor.replace("do", ":")
+                break;
+              case 'DATREAD':
+                valor = ""
+                if(i==0){
+                  /* console.log(this.variables.items) */
+                  let tipo = ""
+                  for(let el of this.variables.items){
+                    if(el.vari==hijo.value[(j+1)])
+                      tipo = el.tipo
+                  }
+                  if(tipo=="Entero"){
+                    valor = `${hijo.value[(j+1)]} = int(input())`
+                  }else{
+                    valor = `${hijo.value[(j+1)]} = input()`
+                  }
+                }
+                break;
+              case 'DATWRITE':
+                /* console.log("WRITE", valor) */
+                if (valor=="write")
+                  valor=valor.replace("write", "print")
+                else if(valor!="("||valor!=")"){
+                  let tipo = ""
+                  for(let el of this.variables.items){
+                    if(el.vari==valor)
+                      tipo = el.tipo
+                  }
+                  if(tipo=="Entero"){
+                    valor = `str(${valor})`
+                  }
+                }
+                break;
+              case 'CONIF':
+                operadores = ["<=", ">="]
+                if(!operadores.some(operador => valor.includes(operador)))
+                  valor = valor.replace("=", "==")
+                valor = valor.replace("<>", "!=")
+                valor = valor.replace("then", ":")
+                if(valor=="else"){
+                  if(hijo.value[j]==("if")){
+                    valor = valor.replace("else", "elif")
+                    hijo.value[j] = ""
+                  }else{
+                    valor += ":"
+                  }
+                }
+                break;
+              case 'BLOCOD':
+                this.aux.caseSw = false
+                break;
+              case 'ASIGVAR':
+                valor = valor.replace("var", "")
+                valor = valor.replace(":=", "=")
+                break;
+              case 'COMSIM':
+                valor = valor.replace("//", "#")
+                break;
+              case 'COMMUL':
+                valor = valor.replace("(*", "'''")
+                valor = valor.replace("*)", "'''")
+              break;
+              case 'SUBPRSIM':
+                console.log("PROC", valor)
+                valor = valor.replace("do(", "")
+                if(valor===")")
+                  valor = valor.replace(")", "")
+              break;
+              default:
+                break;
+            }
+            linea += valor + " "
+          }
+          if(typeof(hijo.level)=='undefined' || hijo.level==null)
+            hijo.level = 0
+          let espacio = '    '.repeat(hijo.level)
+          res += espacio +linea+"\n"
+        }
+      }
+      console.log("FINAL:", res)
+      this.codePython = await res
+      this.$store.state.codePython = await res
+      await this.$store.dispatch('setCodepythonAction')
+    },
+    cargarVarConsProc(){
+      let respuesta = ""
+
+      //Se agrega variables
+      if(this.variables.items.length!==0){
+        respuesta += "#Declaracion de variables\n"
+        let res = {booleano:"", numero:"", cadena:""}
+        for(let item of this.variables.items){
+          const {vari, tipo} = item
+          let myVar = `${vari} = `
+          if(tipo=="Cadena")
+            res.cadena += myVar
+          else if(tipo=="Entero" || tipo=="Decimal")
+            res.numero += myVar
+          else if(tipo=="Cadena")
+            res.booleano += myVar
+        }
+        if(res.numero!=="")
+          respuesta += `${res.numero}0\n`
+        if(res.cadena!=="")
+          respuesta += `${res.cadena}""\n`
+        if(res.booleano!=="")
+          respuesta += `${res.booleano}true\n`
+      }
+
+      //Se agrega constantes
+      if(this.constantes.items.length!==0)
+        respuesta += "#Declaracion de constantes\n"
+      for(let item of this.constantes.items){
+        const {ctte, valor} = item
+        respuesta += `${ctte} = ${valor}\n`
+      }
+
+      //Se agregan procedimientos
+      if(this.procedimientos.items.length!==0){
+        respuesta	+= "#Procedimientos\n"
+        for(let proc of this.procedimientos.items){
+          const {pyt} = proc
+          respuesta	+= pyt
+        }
+      }
+      return respuesta+"\n"
+    },
+    async pruebaSin1(){
+      this.aux.levelOriginal = 0
+      this.aux.id = 99
+      this.aux.arbolObj = []
+      this.error.items = []
+      let nodo = await {id: this.myId, token:null, value: this.nombreArchivo, level: this.myLevelOriginm, parentId:this.myIdParent}
+      this.aux.arbolObj.push(nodo)
+      this.aux.idParent = await this.myId
+      for(let [i, linea] of this.code.split('\n').entries()){
+        let lineaIn = linea.trim()
+        if(lineaIn!==""){
+          await this.getToken(lineaIn)
+          .then(token => {
+            if(token!=null){
+              this.nuevoNodo1(linea, this.myId, token, this.myLevelOrigin, this.myIdParent)
+              .then(newNodo => {
+                this.aux.arbolObj.push(newNodo)
+              })
+            }
+          })
+          .catch(()=>{
+            this.error.items.push({line: i+1, description:"Error de Sintaxis"})
+          })
+        }
+      }
+      await this.mapearIndices()
+      /* await this.armarArbol1() */
+      await this.btn_Generar()
+    },
+    getToken(linea){
+      return new Promise((resolve, reject)=>{
+        for(let parm of this.$store.getters.getParametricas ) {
+          let rgx = ""
+          if (parm.expresionEstructura != "")
+            rgx = parm.expresionEstructura
+          else if(parm.inicioEstructura!="")
+            rgx = parm.inicioEstructura
+          if(rgx!=="")
+          {
+            let val = new RegExp(rgx)
+            if(val.test(linea)){
+              resolve(parm.token)
+            }else{
+              if (parm.finEstructura != ""){
+                rgx = parm.finEstructura
+              }else if(parm.medioEstructura != ""){
+                rgx = parm.medioEstructura
+              }
+              if(rgx!=="")
+              {
+                val = new RegExp(rgx)
+                if (val.test(linea)){
+                  resolve(parm.token)
+                }
+              }
+            }
+          }
+        }
+        reject(null)
+      })
+    },
+    async prueba1(){
+      this.error.items = []
+
+      //Armado de la primera iteracion del arbol
+      this.aux.levelOriginal = 0
+      this.aux.myIdParent = null
+      let nodo = await {id: this.myId, token:null, value: this.nombreArchivo, level: this.myLevelOriginm, parentId:this.myIdParent}
+      this.aux.myIdParent = this.myId
+      this.codeGenerado = nodo
+      for(let [i, linea] of this.code.split('\n').entries()){
+        await this.analizarLinea(linea.trim()).then(token => {
+          if(token!=null){
+            this.nuevoNodo1(this.myId, linea, token, this.myLevelOrigin, this.myIdParent).then(child => {
+              nodo.children.push(child)
+              this.aux.id++
+            })
+          }else{
+            console.log(i, "Error de sintaxis")
+          }
+        })
+      }
+    },
+    async nuevoNodo1(linea, id, token, level, idParent){
+      let idA = id+1
+      let nodo = {id: idA, value:"", token: token, level: level, parentId: idParent}
+      await this.armarSplit1(linea, token).then(node => {
+        nodo.value = node
+      })
+      return nodo
+    },
+    async armarSplit1(cadena, token){
+      this.aux.id += 1
+      let separador
+      let sw = true
+      switch (token)
+      {
+        case 'OPEARIT':
+          separador = cadena.split('+').join('Ø+Ø').split('-').join('Ø-Ø').split('*').join('Ø*Ø').split('/').join('Ø/Ø')
+          break;
+        case 'OPEREL':
+          separador = cadena.split('=').join('Ø=Ø').split('<').join('Ø<Ø').split('<=').join('Ø<=Ø').split('>=').join('Ø>=Ø').split('<>').join('Ø<>Ø')
+          break;
+        case 'OPELOG':
+          separador = cadena.split('not').join('ØnotØ').split('and').join('ØandØ').split('or').join('ØorØ')
+          break;
+        case 'CONCASE':
+          if(cadena.includes(":"))
+            separador = cadena.split(':').join('Ø:Ø').split(';').join('Ø;')
+          else{
+            separador = cadena.split('case').join('caseØ').split('of').join('ØofØ')
+            this.aux.levelOriginal += 1
+            this.aux.idParent = this.myId
+          }
+          break;
+        case 'BUFOR':
+          separador = cadena.split('for').join('forØ').split('to').join('ØtoØ').split('do').join('Ødo')
+          this.aux.levelOriginal += 1
+          this.aux.pilaIds.push(this.myIdParent)
+          this.aux.idParent = this.myId
+          this.aux.bloqueEsp = true
+          break;
+        case 'BUWHILE':
+          separador = cadena.split('while').join('whileØ').split('do').join('Ødo')
+          this.aux.levelOriginal += 1
+          this.aux.pilaIds.push(this.myIdParent)
+          this.aux.idParent = this.myId
+          this.aux.bloqueEsp = true
+          break;
+        case 'DATREAD':
+          separador = cadena.split('read').join('readØ').split('(').join('(Ø').split(')').join('Ø)').split(';').join('Ø;')
+          if(this.myBloqueEsp){
+            this.aux.bloqueEsp = false
+            this.aux.idParent = this.aux.pilaIds.pop()
+          }
+          break;
+        case 'DATWRITE':
+          separador = cadena.split('write').join('writeØ').split('(').join('(Ø').split(')').join('Ø)').split(';').join('Ø;')
+          console.log("WRITE sep", this.myBloqueEsp, separador)
+          if(this.myBloqueEsp){
+            this.aux.bloqueEsp = false
+            this.aux.idParent = this.aux.pilaIds.pop()
+          }
+          break;
+        case 'CONIF':
+          this.aux.levelOriginal += 1
+          this.aux.pilaIds.push(this.myIdParent)
+          this.aux.idParent = this.myId
+          this.aux.bloqueEsp = true
+          if(cadena.trim().substr(0,4)!=="else"){
+            separador = cadena.split('if').join('ifØ').split('then').join('Øthen')
+            /* console.log("CONIF APERTURA", separador, cadena, this.aux.levelOriginal) */
+          }else{
+            separador = cadena.split('else').join('elseØ').split('if').join('ifØ').split('then').join('thenØ')
+            /* console.log("CONIF ELSE", separador, cadena, this.aux.levelOriginal) */
+          }
+          break;
+        case 'BLOCOD':
+          sw = false
+          if(cadena.trim()==="end"){
+            this.aux.bloqueEsp = false
+            this.aux.idParent = this.aux.pilaIds.pop()
+            this.aux.levelOriginal -= 1
+            separador = "endØ"
+          }else if(cadena.trim()==="begin"){
+            this.aux.idParent = this.myId
+            this.aux.pilaIds.push(this.myId)
+            separador = "beginØ"
+          }
+          break;
+        case 'ASIGVAR':
+          separador = cadena.split('var').join('varØ').split(',').join('Ø,Ø').split(':=').join('Ø:=Ø').split('+').join('Ø+Ø').split('-').join('Ø-Ø').split('*').join('Ø*Ø').split('/').join('Ø/Ø').split(';').join('Ø;')
+          if(this.myBloqueEsp){
+            this.aux.bloqueEsp = false
+            this.aux.idParent = this.aux.pilaIds.pop()
+          }
+          break;
+        case 'COMSIM':
+          separador = cadena.split('//').join('//Ø')
+          break;
+        case 'COMMUL':
+          separador = cadena.split('(*').join('(*Ø').split('*)').join('Ø*)')
+          if(!separador.includes('Ø*)'))
+            this.aux.comentarioMultiple = true
+          else
+            this.aux.comentarioMultiple = false
+        break;
+        case 'SUBPRSIM':
+          separador = cadena.split('do(').join('do(Ø').split(');').join('Ø);')
+          console.log(separador)
+          break;
+        default:
+          sw = false
+          break;
+      }
+      if(this.aux.levelOriginal >= this.aux.levelAux){
+        this.aux.levelAux = await this.aux.levelOriginal
+      }
+      return await sw?separador.split('Ø').map(item=>item.trim()):[];
+    },
+    mapearIndices(){
+      this.aux.mapIndices = {}
+      /* let ind = {} */
+      for(let [i, el] of this.myPilaObjetos.entries()){
+        this.aux.mapIndices[`${el.id}`] = i
+      }
+    },
+    armarArbol1(){
+      for(let el of this.myPilaObjetos){
+        // Handle the root element
+        if (el.parentId === null) {
+          el;
+          return;
+        }
+        // Use our mapping to locate the parent element in our data array
+        const parentEl = this.myPilaObjetos[this.aux.mapIndices[el.parentId]];
+        // Add our current el to its parent's `children` array
+        parentEl.children = [...(parentEl.children || []), el];
+      }
     },
     //#endregion
     //#region IvanTePaz
     async verificaSintaxisPseudo(){
       this.error.items = []
 
-      this.codeGenerado = ""
-      let nodo = {token: this.nombreArchivo, level: 0, children: []}
       //Armado de la primera iteracion del arbol
-      await this.code.split('\n').forEach((linea, i)=>{
+      this.aux.levelOriginal = 0
+      let nodo = {id: this.myId, token: this.nombreArchivo, level: this.myLevelOriginm, parentId:null, children: []}
+      this.codeGenerado = nodo
+      for(let [i, linea] of this.code.split('\n').entries()){
         if(linea!=""){
-          this.analizarLinea(linea.trim()).then(token => {
+          await this.analizarLinea(linea.trim()).then(token => {
             if(token!=null){
-              this.nuevoNodo(linea, token).then(child => {
+              this.nuevoNodo(linea, token, this.myLevelOrigin).then(child => {
                 nodo.children.push(child)
+                this.aux.id++
               })
               .catch(error => console.log(error));
             }else{
               this.error.items.push({line: i+1, description:"Error de Sintaxis"})
+              nodo.children.push(linea)
             }
-          }).catch(() => 
+          }).catch(() => {
             this.error.items.push({line: i+1, description:"Error de Sintaxis"})
-          )
-        }
-      })
-      this.codeGenerado = await nodo
-      //--Armado de la primera iteracion del arbol
-      //let res = []
-      //await console.log(this.recorreArbol(nodo.children, res))
-
-      //Limpieza de las estructuras
-      await this.limpiarNodos(this.codeGenerado)
-      //--Limpieza de las estructuras
-    },
-    async recorreArbol(obj=null, result=[]){
-      if (!Array.isArray(obj)){
-          result.push(obj);
-      } else {
-        for (let i=0; i<obj.length; i++){
-          this.recorreArbol(obj[i], result);
+          })
         }
       }
-      return await result;
+      await this.limpiarNodos()
+      await this.armarBloques()
     },
-    async limpiarNodos(arbol){
-      await arbol.children.forEach(nodo => {
-        nodo.children.forEach(hoja => {
-          hoja = "ENTRA"
+    async armarBloques(){
+    },
+    async limpiarNodos(){
+      let arbol = this.codeGenerado
+      const {children} = arbol
+      for(let [i, nodo] of children.entries()){
+        const {children, level} = nodo
+        for(let [j, hoja] of children.entries()){
+        /* children.forEach((hoja, j) => { */
           this.analizarCampo(hoja).then(token => {
-            if(token!=null)
-              this.nuevoNodo(hoja, token).then(() => {
-                hoja = "ENTRA"//newNodo
+            if(token!=null && token!="BLOCOD"){
+              this.nuevoNodo(hoja, token, level).then(newNodo => {
+                arbol.children[i].children[j] = newNodo
               })
+            }
           })
-        })
-      })
+        }
+      }
       this.codeGenerado = await arbol
     },
     analizarLinea(linea){
       return new Promise((resolve, reject)=>{
-        this.$store.getters.getParametricas.forEach(parm => {
+        for(let parm of this.$store.getters.getParametricas ) {
           let rgx = ""
-          if (parm.expresionEstructura!="")
+          if (parm.expresionEstructura != "")
             rgx = parm.expresionEstructura
-          else
+          else if(parm.inicioEstructura!="")
             rgx = parm.inicioEstructura
-          let val = new RegExp(rgx)
-          if (val.test(linea))
-            resolve(parm.token)
-        })
+          if(rgx!=="")
+          {
+            let val = new RegExp(rgx)
+            if(val.test(linea)){
+              resolve(parm.token)
+            }else{
+              if (parm.finEstructura != ""){
+                rgx = parm.finEstructura
+              }else if(parm.medioEstructura != ""){
+                rgx = parm.medioEstructura
+              }
+              if(rgx!=="")
+              {
+                val = new RegExp(rgx)
+                if (val.test(linea)){
+                  resolve(parm.token)
+                }
+              }
+            }
+          }
+        }
         reject(false)
       })
     },
-    async nuevoNodo(cadena, token)
+    async nuevoNodo(cadena, token, level)
     {
-      let nodo = {"token":token, "level":0, "children":[]}
+      let nodo = {token:token, level:level, children:[]}
       await this.armarSplit(cadena, token).then(node => {
         nodo.children = node
       })
-      if(nodo)
-      return await nodo
+      return nodo
     },
     async armarSplit(cadena, token){
       let separador
@@ -602,12 +1055,15 @@ export default {
           break;
         case 'CONCASE':
           separador = cadena.split('case').join('caseØ').split('of').join('ØofØ')
+          this.aux.levelOriginal += 1
           break;
         case 'BUFOR':
           separador = cadena.split('for').join('forØ').split('to').join('ØtoØ').split('do').join('Ødo')
+          this.aux.levelOriginal += 1
           break;
         case 'BUWHILE':
           separador = cadena.split('while').join('whileØ').split('do').join('Ødo')
+          this.aux.levelOriginal += 1
           break;
         case 'DATREAD':
           separador = cadena.split('read').join('readØ').split('(').join('(Ø').split(')').join('Ø)').split(';').join('Ø;')
@@ -616,7 +1072,23 @@ export default {
           separador = cadena.split('write').join('writeØ').split('(').join('(Ø').split(')').join('Ø)').split(';').join('Ø;')
           break;
         case 'CONIF':
-          separador = cadena.split('if').join('ifØ').split('then').join('thenØ')
+          this.aux.levelOriginal += 1
+          if(cadena.trim().substr(0,4)!=="else"){
+            separador = cadena.split('if').join('ifØ').split('then').join('thenØ')
+            /* console.log("CONIF APERTURA", separador, cadena, this.aux.levelOriginal) */
+          }else{
+            separador = cadena.split('else').join('elseØ').split('if').join('ifØ').split('then').join('thenØ')
+            /* console.log("CONIF ELSE", separador, cadena, this.aux.levelOriginal) */
+          }
+          break;
+        case 'BLOCOD':
+          sw = false
+          if(cadena.trim()==="end"){
+            this.aux.levelOriginal -= 1
+            separador = "endØ"
+          }else if(cadena.trim()==="begin"){
+            separador = "beginØ"
+          }
           break;
         case 'ASIGVAR':
           separador = cadena.split('var').join('varØ').split(',').join('Ø,Ø').split(':=').join('Ø:=Ø').split('+').join('Ø+Ø').split('-').join('Ø-Ø').split('*').join('Ø*Ø').split('/').join('Ø/Ø').split(';').join('Ø;')
@@ -624,9 +1096,20 @@ export default {
         case 'COMSIM':
           separador = cadena.split('//').join('//Ø')
           break;
+        case 'COMMUL':
+          separador = cadena.split('(*').join('(*Ø').split('*)').join('Ø*)')
+          if(!separador.includes('Ø*)'))
+            this.aux.comentarioMultiple = true
+          else
+            this.aux.comentarioMultiple = false
+        break;
         default:
           sw = false
           break;
+      }
+      if(this.aux.levelOriginal >= this.aux.levelAux){
+        /* console.log("Levels:", this.aux.levelOriginal, this.aux.levelAux) */
+        this.aux.levelAux = await this.aux.levelOriginal
       }
       return await sw?separador.split('Ø').map(item=>item.trim()):[];
     },
@@ -661,220 +1144,35 @@ export default {
       return await token
     },
     //#endregion
-
-    //#region LUIGI
-    Var(name,value,type){
-      this.name=name;
-      this.value=value;
-      this.type=type;
-      this.asigTipo=()=>{
-        return ({
-          token:'ASIGTIPO',
-          children:[
-            'var',
-            this.name,
-            ':=',
-            this.value,
-            ':',
-            this.type,
-            ';'
-          ]
-        })
-      }
-      this.asigVar=()=>{
-        return ({
-          token:'ASIGVAR',
-          children:[
-            this.name,
-            ':=',
-            this.value,
-            ';'
-          ]
-        })
-      }
+  },
+  computed:{
+    myCode: function(){
+      return this.codeGenerado
     },
-    For(init,limit){
-      this.init=init;
-      this.limit=limit;
-      //this.children=genera(tmpString);
-      this.display=()=>{
-        return ({
-          token:'BUFOR',
-          children:[
-            'for',
-            this.init,
-            'to',
-            this.limit,
-            'do',
-            this.children
-          ]
-        })
-      }
+    myBloqueEsp: function(){
+      return this.aux.bloqueEsp
     },
-    Arit(value1,operator,value2){
-      this.value1=value1;
-      this.value2=value2;
-      this.operator=operator;
-      this.display=()=>{
-        return ({
-          token:'OPEARIT',
-          children:[
-            this.value1,
-            this.operator,
-            this.value2
-          ]
-        })
-      }
+    myId: function(){
+      return this.aux.id
     },
-    Read(value){
-      this.value=value;
-      this.display=()=>{
-        return({
-          token:'DATREAD',
-          children:[
-            'read',
-            '(',
-            this.value,
-            ')',
-            ';'
-          ]
-        })
-      }
+    myIdParent: function(){
+      return this.aux.idParent
     },
-    Block(){
-      //this.children=genera(stringChildren);
-      this.addChildren=(child)=>{
-        this.children.push(child);
-      }
-      this.display=()=>{
-        return ({
-          token:'BLOCOD',
-          children:[
-            'begin',
-            this.children,
-            'end'
-          ]
-        })
-      }
+    myLevelOrigin: function(){
+      return this.aux.levelOriginal
     },
-    Write(value){
-      this.value=value;
-      this.display=()=>{
-        return({
-          token:'DATWRITE',
-          children:[
-            'write',
-            '(',
-            this.value,
-            ')',
-            ';'
-          ]
-        })
-      }
+    myLevelAux: function(){
+      return this.aux.levelAux
     },
-    cases(values,args,stringChildren){
-      let tmp='';
-      let regSpace=new RegExp(/\S+/,'g');
-      switch(values){
-        case 'ASIGVAR':
-          if((args.input.indexOf('var'))!==-1){
-            tmp=args.input.match(regSpace).join('')
-            tmp=tmp.split(/(var|:=|:|;)/)
-            tmp=new this.Var(tmp[2],tmp[4],tmp[6])
-            return tmp.asigTipo();
-          }else{
-            tmp=args[0].match(regSpace).join('')
-            tmp=tmp.split(/(:=|:)/)
-            tmp=new this.Var(tmp[0],tmp[2])
-            return tmp.asigVar();
-          }
-        case 'BUFOR':
-          tmp = new this.For(args[1],args[2],stringChildren)
-          return tmp.display()
-        case 'DATREAD':
-          tmp=new this.Read(args[1])
-          return tmp.display();
-        case 'DATWRITE':
-          tmp =new this.Write(args[1])
-          return tmp.display();
-        case 'BLOCOD':
-          tmp =new this.Block(stringChildren)
-          return tmp.display();
-        default:
-          '';
-      }
+    myComentarioMultiple: function(){
+      return this.aux.comentarioMultiple
     },
-    obtieneKeys(lines){
-      let pivote=1;
-      let tmpPivote=0;
-      let beforeLine='';
-      let sw = false;
-      var parmA = this.$store.state.stParametricas.filter(d => d.prioridad==0)
-      return lines.split("\n").map((line)=>{
-        for(const regA of parmA){
-          console.log(regA, line)
-
-          if(beforeLine.match(regA.expresionEstructura==''?regA.inicioEstructura:regA.expresionEstructura) && regA.token!=='BLOCOD' && !/begin/.test(line.trim())){
-            sw = true;
-            pivote+=1;
-            break;
-          }
-        }
-        tmpPivote=pivote;
-        //Si la linea Coincide con PrioridadA Significa que habra un bloque de codigo o unsa sola linea
-        for(const regA in parmA){
-          if(line.match(regA.expresionEstructura==''?regA.inicioEstructura:regA.expresionEstructura)){
-            pivote+=1;
-            break;
-          }
-        }
-        if(/end/.test(line)||sw){
-          sw=false;
-          tmpPivote-=1;
-          pivote-=2;
-        }
-        beforeLine=line;
-        return tmpPivote;
-      })
-    },
-    genera(lines){
-      let keys=this.obtieneKeys(lines)
-      let j=0
-      let nodo=[]
-      let parmA = this.$store.state.stParametricas.filter(d => d.prioridad==0)
-      let parmB = this.$store.state.stParametricas.filter(d => d.prioridad==1)
-      //var parmC = this.$store.state.stParametricas.filter(d => d.prioridad==2)
-      lines = lines.split('\n')
-      while(j<lines.length){
-        let sw=true;
-
-        for(const regA of parmA){
-          let regx = lines[j].match(regA.expresionEstructura==''?regA.inicioEstructura:regA.expresionEstructura)
-          if(regx){
-            let lastIndex=keys.indexOf(keys[j],j+1)
-            let Mj=lastIndex===-1?lines.length:lastIndex
-            let subArray=lines.slice(j+1,lines.length-j)
-            nodo.push(this.cases(regA.token,regx,subArray))
-            sw=false
-            j=Mj
-            j++
-            break;
-          }
-        }
-        if(sw){
-          for(const regB of parmB){
-            let regx = lines[j].match(regB.expresionEstructura==''?regB.inicioEstructura:regB.expresionEstructura)
-            if(regx){
-              nodo.push(this.cases(regB.token,regx))
-              j++;
-              break;
-            }
-          }
-        }
-      }
-      return nodo
+    myPilaObjetos: function(){
+      return this.aux.arbolObj
     }
-    //#endregion
+  },
+  updated(){
+    this.procedimientos.items = this.$store.getters.getProcedimientos
   }
 };
 </script>

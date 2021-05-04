@@ -37,7 +37,7 @@
                     </b-button>
                 </b-col>
                 <b-col sm="12" lg="6" class="p-1">
-                    <b-button variant="success" block>
+                    <b-button variant="success" block @click="guardarProcedimiento">
                         Guardar
                     </b-button>
                 </b-col>
@@ -98,7 +98,7 @@
                                 v-model="varReturnSelected"
                                 :options="variables.items"
                                 value-field="id"
-                                text-field="var"
+                                text-field="vari"
                                 class="m-1"
                                 size="sm"
                                 :disabled="!checkVarReturn"
@@ -125,6 +125,7 @@
                     v-model="code"
                     :options="cmOptions"
                     class="text-left border border-secondary"
+                    @input="pruebaSin1"
                     ></codemirror>
                 </b-col>
                 <!-- /Contenedor del editor de texto -->
@@ -309,12 +310,13 @@ export default{
             varReturnSelected: null,
             variables: {
                 newVar: null,
+                newVarState: null,
                 selected: null,
                 fields: [
-                    {key:"var", label: "Var"}, 
-                    {key:"tipo", label:"Tipo"},
-                    {key:"in", label:"In"},
-                    {key:"out", label:"Out"}
+                {key:"vari", label: "Var"}, 
+                {key:"tipo", label:"Tipo"},
+                {key:"in", label:"In"},
+                {key:"out", label:"Out"}
                 ],
                 items: []
             },
@@ -323,26 +325,44 @@ export default{
                 newVal: null,
                 selected: null,
                 fields: [
-                    {key:"var", label: "Var"}, 
-                    {key:"tipo", label:"Tipo"}, 
-                    {key:"valor", label:"Valor"}
+                {key:"var", label: "Var"}, 
+                {key:"tipo", label:"Tipo"}, 
+                {key:"var", label: "Ctte"}, 
+                {key:"tipo", label:"Tipo"}, 
+                {key:"valor", label:"Valor"}
                 ],
                 items: [],
             },
             error: {
-                fields: ["Ln.", "Descripcion"],
-                items: [
-                { Ln: 1, Descripcion: "Esta es una descripcion" },
-                { Ln: 2, Descripcion: "Segunda descripcion de la tabla de errores" },
+                fields: [
+                {key:"line", label: "Ln."},
+                {key:"description", label: "Descripcion"}
                 ],
+                items: [],
             },
             code: "// Aqui va su procedimiento\n\n\n\n",
             cmOptions: {
                 // codemirror options
                 tabSize: 4,
-                mode: "text/pascal",
-                theme: "base16-dark",
+                mode: "text/x-pascal",
                 lineNumbers: true,
+            },
+            aux: {
+                id: 100,
+                idParent: null,
+                bloqueEsp: false,
+                pilaIds: [],
+                mapIndices: {},
+                caseSw: false,
+                caseFirst: false,
+                levelOriginal: 0,
+                levelAux: 0,
+                comentarioMultiple: false,
+                pilaObjetos: []
+            },
+            auxPy:{
+                forVariable: "",
+                forTope: ""
             }
         }
     },
@@ -353,6 +373,7 @@ export default{
         tipoVariables: Array
     },
     methods:{
+
         selectVarOut(){
             if(!this.checkVarReturn)
             {
@@ -380,26 +401,23 @@ export default{
                 slct = this.variables.selected
             }
             console.log(varIn, slct, va)
-            const variable = new RegExp("^[a-zA-Z]+([-_]?[a-zA-Z0-9]+)*$").test(va)?va:null;
-            const tipo = this.tipoVariables.find(el => el.value == slct).text
-            let id = this.variables.items.length + 1100
+            const variable = new RegExp("^[a-zA-Z]+([-_]?[a-zA-Z0-9]+)*$").test(va)?va:null
+
+            let tipo = this.tipoVariables.find(el => el.value == slct).text;
+            let id = this.variables.items.length + 100
             if(variable!=null && tipo!=null)
             {
-                this.variables.items.push({id: id, var: variable, tipo: tipo, in:varIn, out:false})
-                this.newVarIn = this.newVarSelected = null
+                this.variables.items.push({id: id, vari: variable, tipo: tipo, in:varIn, out: false})
                 this.variables.newVar = this.variables.selected = null
-                /* this.$store.state.stVariable = {id: id, var: variable, tipo: tipo}
-                this.$store.dispatch('addVariablesAction') */
             }
         },
-        eliminarVariable(id)
-            {
+        eliminarVariable(id){
             const i = this.variables.items.indexOf(this.variables.items.find(el => el.id==id))
             if(i>=0){
                 this.variables.items.splice(i, 1)
-                /* this.$store.state.stVariable = i
+                this.$store.state.stVariable = i
                 this.$store.dispatch('deleteVariableAction')
-                this.$store.state.stVariable = null */
+                this.$store.state.stVariable = null
             }
         },
         agregarConstante(){
@@ -437,16 +455,416 @@ export default{
                 this.constantes.newCtte = this.constantes.newVal = this.constantes.selected = null
             }
         },
-        eliminarConstante(id)
-        {
-            const i = this.constantes.items.indexOf(this.constantes.items.find(el => el.id==id))
-            if(i>=0)
-                this.constantes.items.splice(i, 1)
+        //#region ARBOLES
+        guardarProcedimiento(){
+            console.log(this.error.items.length)
+            if(this.error.items.length==0){
+                let proc = this.$store.getters.getProcedimientos
+                let idProc = proc.length + 1
+                let varInTipo = ""
+                let varOutTipo = ""
+                let varInValor = ""
+                let varOutValor = ""
+
+                this.variables.items.map(el => {
+                    if(el.in){
+                        varInTipo += el.tipo + "\n"
+                        varInValor += el.vari + ","
+                    }
+                    if(el.out){
+                        varOutTipo = el.tipo
+                        varOutValor += el.vari+","
+                    }
+                })
+                varInValor = varInValor.length>0?varInValor.substring(0,varInValor.length-1):varInValor
+                
+                let codPython = `def ${this.title}(${varInValor}):\n${this.codePython}\n   ${varOutValor}`
+
+                this.$store.state.stProcedimiento = {id: idProc, procIn: varInTipo, procOut: varOutTipo, procedure: this.title, pseudo: this.code, pyt: codPython, variables:this.variables, constantes:this.constantes}
+                this.$store.dispatch('addProcedimientosAction')
+                this.$store.state.stProcedimiento = null
+            }
+        },
+        async btn_Generar(){
+            let res= await this.cargarVarConsProc()
+            let pila = this.myPilaObjetos
+            pila.shift()
+            for(let hijo of pila){
+                let linea = ""
+                for(let [i, valor] of hijo.value.entries()){
+                let operadores = []
+                let j = i+1
+                valor = valor.replace(";", "")
+                if(this.aux.caseSw && hijo.level>0){
+                    hijo.level = parseInt(hijo.level) - 1
+                }
+                switch (hijo.token)
+                {
+                    case 'CONCASE':              
+                    valor = valor.replace("of", "")
+                    if (valor=="case"){
+                        valor = valor.replace("case", "")
+                        this.caseValor = hijo.value[j]
+                        hijo.value[j] = ""
+                        this.aux.caseSw = true
+                        this.aux.caseFirst = true
+                    }
+
+                    if(hijo.value[j]==":"){
+                        hijo.value[j] = ""
+                        let auxiConcatena =""
+                        let k = j + 1
+                        if(this.aux.caseFirst){
+                        valor = `if ${this.caseValor}==${valor} :`
+                        this.aux.caseFirst = false
+                        }else{
+                        valor = `elif ${this.caseValor}==${valor} :`
+                        }
+                        if(hijo.value[k].includes("write")){
+                        auxiConcatena = hijo.value[k].replace("write", "print")
+                        console.log(auxiConcatena)
+                        hijo.value[k] = ""
+                        let espacio = '    '.repeat(hijo.level)
+                        valor += `\n${espacio}   ${auxiConcatena}`
+                        }
+                    }
+                    break;
+                    case 'BUFOR':
+                    if(valor.includes(":=")){
+                        this.auxPy.forVariable = valor.split(":=")[0]
+                        this.auxPy.forTope = valor.split(":=")[1]
+                        valor = this.auxPy.forVariable
+                    }
+                    if(this.auxPy.nextRange){
+                        valor = `range(${this.auxPy.forTope}, ${valor})`
+                        this.auxPy.nextRange = false
+                    }
+                    if(valor=="to")
+                        this.auxPy.nextRange = true
+                    valor = valor.replace("to", "in")
+                    valor = valor.replace("do", ":")
+                    break;
+                    case 'BUWHILE':
+                    valor = valor.replace("do", ":")
+                    break;
+                    case 'DATREAD':
+                    valor = ""
+                    if(i==0)
+                        valor = `${hijo.value[(j+1)]} = input()`
+                    break;
+                    case 'DATWRITE':
+                    if (valor=="write")
+                        valor=valor.replace("write", "print")
+                    break;
+                    case 'CONIF':
+                    operadores = ["<=", ">="]
+                    if(!operadores.some(operador => valor.includes(operador)))
+                        valor = valor.replace("=", "==")
+                    valor = valor.replace("<>", "!=")
+                    valor = valor.replace("then", ":")
+                    if(valor=="else"){
+                        if(hijo.value[j]==("if")){
+                        valor = valor.replace("else", "elif")
+                        hijo.value[j] = ""
+                        }else{
+                        valor += ":"
+                        }
+                    }
+                    break;
+                    case 'BLOCOD':
+                    this.aux.caseSw = false
+                    break;
+                    case 'ASIGVAR':
+                    valor = valor.replace("var", "")
+                    valor = valor.replace(":=", "=")
+                    break;
+                    case 'COMSIM':
+                    valor = valor.replace("//", "#")
+                    break;
+                    case 'COMMUL':
+                    valor = valor.replace("(*", "'''")
+                    valor = valor.replace("*)", "'''")
+                    break;
+                    default:
+                    break;
+                }
+                linea += valor + " "
+                }
+                if(typeof(hijo.level)=='undefined' || hijo.level==null)
+                hijo.level = 0
+                let espacio = '    '.repeat(hijo.level)
+                res += '   ' + espacio +linea+"\n"
+            }
+            console.log("FINAL:", res)
+            this.codePython = await res
+            this.$store.state.codePython = await res
+            await this.$store.dispatch('setCodepythonAction')
+        },
+        cargarVarConsProc(){
+        //Se agrega variables
+        if(this.constantes.items.length!==0)
+            respuesta += "#Declaracion de variables\n"
+        let res = {booleano:"", numero:"", cadena:""}
+        for(let item of this.variables.items){
+            const {vari, tipo} = item
+            let myVar = `${vari} = `
+            if(tipo=="Cadena")
+            res.cadena += myVar
+            else if(tipo=="Entero" || tipo=="Decimal")
+            res.numero += myVar
+            else if(tipo=="Cadena")
+            res.booleano += myVar
         }
+        let respuesta = ""
+        if(res.numero!=="")
+            respuesta += `${res.numero}0\n`
+        if(res.cadena!=="")
+            respuesta += `${res.cadena}""\n`
+        if(res.booleano!=="")
+            respuesta += `${res.booleano}true\n`
+
+        //Se agrega constantes
+        if(this.constantes.items.length!==0)
+            respuesta += "#Declaracion de constantes\n"
+        for(let item of this.constantes.items){
+            const {ctte, valor} = item
+            respuesta += `${ctte} = ${valor}\n`
+        }
+        return respuesta
+        },
+        async pruebaSin1(){
+            this.aux.levelOriginal = 0
+            this.aux.id = 99
+            this.aux.pilaObjetos = []
+            this.error.items = []
+            let nodo = await {id: this.myId, token:null, value: this.nombreArchivo, level: this.myLevelOriginm, parentId:this.myIdParent}
+            this.aux.pilaObjetos.push(nodo)
+            this.aux.idParent = await this.myId
+            for(let [i, linea] of this.code.split('\n').entries()){
+                let lineaIn = linea.trim()
+                if(lineaIn!==""){
+                await this.getToken(lineaIn)
+                .then(token => {
+                    if(token!=null){
+                    this.nuevoNodo1(linea, this.myId, token, this.myLevelOrigin, this.myIdParent)
+                    .then(newNodo => {
+                        this.aux.pilaObjetos.push(newNodo)
+                    })
+                    }
+                })
+                .catch(()=>{
+                    this.error.items.push({line: i+1, description:"Error de Sintaxis"})
+                })
+                }
+            }
+            await this.mapearIndices()
+            /* await this.armarArbol1() */
+            await this.btn_Generar()
+        },
+        getToken(linea){
+        return new Promise((resolve, reject)=>{
+            for(let parm of this.$store.getters.getParametricas ) {
+            let rgx = ""
+            if (parm.expresionEstructura != "")
+                rgx = parm.expresionEstructura
+            else if(parm.inicioEstructura!="")
+                rgx = parm.inicioEstructura
+            if(rgx!=="")
+            {
+                let val = new RegExp(rgx)
+                if(val.test(linea)){
+                resolve(parm.token)
+                }else{
+                if (parm.finEstructura != ""){
+                    rgx = parm.finEstructura
+                }else if(parm.medioEstructura != ""){
+                    rgx = parm.medioEstructura
+                }
+                if(rgx!=="")
+                {
+                    val = new RegExp(rgx)
+                    if (val.test(linea)){
+                    resolve(parm.token)
+                    }
+                }
+                }
+            }
+            }
+            reject(null)
+        })
+        },
+        async prueba1(){
+        this.error.items = []
+
+        //Armado de la primera iteracion del arbol
+        this.aux.levelOriginal = 0
+        this.aux.myIdParent = null
+        let nodo = {id: this.myId, token:null, value: this.nombreArchivo, level: this.myLevelOriginm, parentId:this.myIdParent}
+        this.aux.myIdParent = this.myId
+        this.codeGenerado = nodo
+        for(let [i, linea] of this.code.split('\n').entries()){
+            await this.analizarLinea(linea.trim()).then(token => {
+            if(token!=null){
+                this.nuevoNodo1(this.myId, linea, token, this.myLevelOrigin, this.myIdParent).then(child => {
+                nodo.children.push(child)
+                this.aux.id++
+                })
+            }else{
+                console.log(i, "Error de sintaxis")
+            }
+            })
+        }
+        },
+        async nuevoNodo1(linea, id, token, level, idParent){
+        let idA = id+1
+        let nodo = {id: idA, value:"", token: token, level: level, parentId: idParent}
+        await this.armarSplit1(linea, token).then(node => {
+            nodo.value = node
+        })
+        return nodo
+        },
+        async armarSplit1(cadena, token){
+        this.aux.id += 1
+        let separador
+        let sw = true
+        switch (token)
+        {
+            case 'OPEARIT':
+            separador = cadena.split('+').join('Ø+Ø').split('-').join('Ø-Ø').split('*').join('Ø*Ø').split('/').join('Ø/Ø')
+            break;
+            case 'OPEREL':
+            separador = cadena.split('=').join('Ø=Ø').split('<').join('Ø<Ø').split('<=').join('Ø<=Ø').split('>=').join('Ø>=Ø').split('<>').join('Ø<>Ø')
+            break;
+            case 'OPELOG':
+            separador = cadena.split('not').join('ØnotØ').split('and').join('ØandØ').split('or').join('ØorØ')
+            break;
+            case 'CONCASE':
+            if(cadena.includes(":"))
+                separador = cadena.split(':').join('Ø:Ø').split(';').join('Ø;')
+            else{
+                separador = cadena.split('case').join('caseØ').split('of').join('ØofØ')
+                this.aux.levelOriginal += 1
+                this.aux.idParent = this.myId
+            }
+            break;
+            case 'BUFOR':
+            separador = cadena.split('for').join('forØ').split('to').join('ØtoØ').split('do').join('Ødo')
+            this.aux.levelOriginal += 1
+            this.aux.pilaIds.push(this.myIdParent)
+            this.aux.idParent = this.myId
+            this.aux.bloqueEsp = true
+            break;
+            case 'BUWHILE':
+            separador = cadena.split('while').join('whileØ').split('do').join('Ødo')
+            this.aux.levelOriginal += 1
+            this.aux.pilaIds.push(this.myIdParent)
+            this.aux.idParent = this.myId
+            this.aux.bloqueEsp = true
+            break;
+            case 'DATREAD':
+            separador = cadena.split('read').join('readØ').split('(').join('(Ø').split(')').join('Ø)').split(';').join('Ø;')
+            if(this.myBloqueEsp){
+                this.aux.bloqueEsp = false
+                this.aux.idParent = this.aux.pilaIds.pop()
+            }
+            break;
+            case 'DATWRITE':
+            separador = cadena.split('write').join('writeØ').split('(').join('(Ø').split(')').join('Ø)').split(';').join('Ø;')
+            if(this.myBloqueEsp){
+                this.aux.bloqueEsp = false
+                this.aux.idParent = this.aux.pilaIds.pop()
+            }
+            break;
+            case 'CONIF':
+            this.aux.levelOriginal += 1
+            this.aux.pilaIds.push(this.myIdParent)
+            this.aux.idParent = this.myId
+            this.aux.bloqueEsp = true
+            if(cadena.trim().substr(0,4)!=="else"){
+                separador = cadena.split('if').join('ifØ').split('then').join('Øthen')
+                console.log("CONIF APERTURA", separador, cadena, this.aux.levelOriginal)
+            }else{
+                separador = cadena.split('else').join('elseØ').split('if').join('ifØ').split('then').join('thenØ')
+                console.log("CONIF ELSE", separador, cadena, this.aux.levelOriginal)
+            }
+            break;
+            case 'BLOCOD':
+            sw = false
+            if(cadena.trim()==="end"){
+                this.aux.bloqueEsp = false
+                this.aux.idParent = this.aux.pilaIds.pop()
+                this.aux.levelOriginal -= 1
+                separador = "endØ"
+            }else if(cadena.trim()==="begin"){
+                this.aux.idParent = this.myId
+                this.aux.pilaIds.push(this.myId)
+                separador = "beginØ"
+            }
+            break;
+            case 'ASIGVAR':
+            separador = cadena.split('var').join('varØ').split(',').join('Ø,Ø').split(':=').join('Ø:=Ø').split('+').join('Ø+Ø').split('-').join('Ø-Ø').split('*').join('Ø*Ø').split('/').join('Ø/Ø').split(';').join('Ø;')
+            if(this.myBloqueEsp){
+                this.aux.bloqueEsp = false
+                this.aux.idParent = this.aux.pilaIds.pop()
+            }
+            break;
+            case 'COMSIM':
+            separador = cadena.split('//').join('//Ø')
+            break;
+            case 'COMMUL':
+            separador = cadena.split('(*').join('(*Ø').split('*)').join('Ø*)')
+            if(!separador.includes('Ø*)'))
+                this.aux.comentarioMultiple = true
+            else
+                this.aux.comentarioMultiple = false
+            break;
+            default:
+            sw = false
+            break;
+        }
+        if(this.aux.levelOriginal >= this.aux.levelAux){
+            this.aux.levelAux = await this.aux.levelOriginal
+        }
+        return await sw?separador.split('Ø').map(item=>item.trim()):[];
+        },
+        mapearIndices(){
+        this.aux.mapIndices = {}
+        /* let ind = {} */
+        for(let [i, el] of this.myPilaObjetos.entries()){
+            this.aux.mapIndices[`${el.id}`] = i
+        }
+        },
+        //#endregion
     },
-    mounted(){
+    created(){
         this.id = this.$store.state.stProcedimientos.length + 1000
         this.code = "// Aqui va su procedimiento"
+    },
+    computed:{
+        myCode: function(){
+        return this.codeGenerado
+        },
+        myBloqueEsp: function(){
+        return this.aux.bloqueEsp
+        },
+        myId: function(){
+        return this.aux.id
+        },
+        myIdParent: function(){
+        return this.aux.idParent
+        },
+        myLevelOrigin: function(){
+        return this.aux.levelOriginal
+        },
+        myLevelAux: function(){
+        return this.aux.levelAux
+        },
+        myComentarioMultiple: function(){
+        return this.aux.comentarioMultiple
+        },
+        myPilaObjetos: function(){
+        return this.aux.pilaObjetos
+        }
     }
 }
 </script>
